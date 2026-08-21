@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoginPage</title>
+    <script src="js/axios.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="bolla bolla-1"></div>
+    <div class="bolla bolla-2"></div>
+    <div class="bolla bolla-3"></div>
+    <div class="bolla bolla-4"></div>
+    <div class="bolla bolla-5"></div>
+
+    <div class="login-card mx-3">
+        <div id="sezione-login">
+            <h1 class="text-center fw-bold mb-4 text-white">Benvenuto, accedi al portale!</h1>
+        
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="NomeUtente" class="form-label fw-semibold text-white mb-1">Nome</label>
+                    <input type="text" class="form-control text-white placeholder-light" id="NomeUtente" placeholder="Inserisci il tuo nome utente" required>
+                </div>
+
+                <div class="mb-4">
+                    <label for="Ruolo" class="form-label fw-semibold text-white mb-1">Ruolo</label>
+                    <select class="form-select text-white" id="Ruolo" required>
+                        <option value="" disabled selected class="text-dark">Seleziona il tuo ruolo...</option>
+                        <option value="privato" class="text-dark">Privato</option>
+                        <option value="azienda" class="text-dark">Azienda</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-verde-chiaro w-100 py-2.5 rounded-3 btn-distaccato">
+                    Accedi
+                </button>
+            </form>
+        </div>
+        
+        <div id="sezione-selezione" style="display: none;">
+            <h1 class="text-white fw-bold text-center mb-3">Seleziona Profilo</h1>
+            <p class="text-white-50 text-center mb-4">Seleziona un account per accedere alla dashboard:</p>
+
+            <div style="max-height: 250px; overflow-y: auto;" class="mb-5 border border-white rounded custom-scrollbar">
+                <div id="lista-opzioni" class="list-group list-group-flush">
+                    
+                </div>
+            </div>
+        
+            <button id="btn-indietro" class="btn btn-outline-white w-100 btn-verde-chiaro mt-4 btn-distaccato">Torna al Login</button>
+        </div>
+    </div> 
+    
+    <script src="js/login-logic.js"></script>
+</body>
+</html>

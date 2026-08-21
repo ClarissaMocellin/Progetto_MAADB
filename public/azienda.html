@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="titolo-benvenuto">Dashboard Aziendale</title>
+    <script src="js/axios.min.js"></script>
+    <script src="js/chart.umd.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+
+</head>
+<body class="body-scorrimento">
+
+    <div class="bolla bolla-1"></div>
+    <div class="bolla bolla-2"></div>
+    <div class="bolla bolla-3"></div>
+    <div class="bolla bolla-4"></div>
+    <div class="bolla bolla-5"></div>
+
+    <div class="container py-5 div-distaccato">
+        <div class="dashboard-container w-100">
+            
+            <div class="header-dashboard-fissa">
+                <h1>Area aziendale</h1>
+                
+                <div class="lato-destro-header">
+                    <a href="index.html" class="btn-esci-custom">Esci</a>
+                    <div class="avatar-css"></div>
+                </div>
+            </div>
+
+            <div class="riquadro-principale-verticale">
+                <div class="d-flex align-items-stretch layout-split h-100">
+                    
+                    <div class="nav flex-column nav-pills menu-verticale-sinistro h-100" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                        <button class="nav-link-vertical active" id="btn-tab-sicurezza">
+                            Sicurezza log
+                        </button>
+                        <button class="nav-link-vertical" id="btn-tab-investitori">
+                            Ricerca investitori
+                        </button>
+                    </div>
+
+                    <div class="tab-content contenuto-verticale-destro flex-grow-1" id="v-pills-tabContent">
+                        
+                        <div id="pane-sicurezza" class="pannello-personalizzato">
+                            <h3 class="fw-bold mb-2 text-white">Analisi Sicurezza e Canali di Accesso</h3>
+                            <p class="text-white-50 small mb-4">Monitoraggio delle percentuali di utilizzo dei metodi di autenticazione e relative quote di blocchi per il rilevamento di anomalie (MongoDB).</p>
+                            
+                            <div id="boxRisultatiSicurezza" class="mb-4">
+                            
+                            </div>
+                        
+                            <div class="table-responsive mb-4" style="display: none;">
+                                <table class="table"><tbody id="tabellaAccessiBody"></tbody></table>
+                            </div>
+                        
+                            <button id="btnVerificaAccessi" class="btn btn-verde-chiaro w-100 py-2.5 rounded-3">
+                                Analizza Canali e Log Anomalie
+                            </button>
+                        </div>
+
+                        <div id="pane-investitori" class="pannello-personalizzato" style="display: none;">
+                            <h3 class="fw-bold mb-2 text-white">IV. Ricerca Avanzata Target Investitori</h3>
+                            <p class="text-white-50 small mb-4">Classifica dei candidati ideali privi di debiti (MongoDB) ordinati secondo il calcolo dell'indice di solidità basato su reti transazionali fino a 3 salti (Neo4j).</p>
+
+                            <div class="table-responsive mb-4">
+                                <table class="table table-scura table-borderless mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" style="width: 15%" class="text-white">Rank</th>
+                                            <th scope="col" style="width: 35%" class="text-white">Codice Conto</th>
+                                            <th scope="col" class="text-center text-white" style="width: 25%">Rapporto U/E</th>
+                                            <th scope="col" class="text-end text-white" style="width: 25%">Score Trust</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabellaInvestitoriBody">
+                                        <tr>
+                                            <td colspan="4" class="text-center text-white-50 py-4">
+                                                Nessuna ricerca avviata. Clicca per elaborare gli algoritmi di tracciamento.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <button id="btnCercaInvestitori" class="btn btn-verde-chiaro py-2.5 rounded-3 w-100 mb-4">
+                                Calcola Indici di Solidità Rete
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/azienda-logic.js"></script>
+</body>
+</html>

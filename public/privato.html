@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Privata</title>
+    <script src="js/axios.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+    
+</head>
+<body class="body-scorrimento">
+
+    <div class="bolla bolla-1"></div>
+    <div class="bolla bolla-2"></div>
+    <div class="bolla bolla-3"></div>
+    <div class="bolla bolla-4"></div>
+    <div class="bolla bolla-5"></div>
+
+    <div class="container py-5 div-distaccato">
+        <div class="dashboard-container w-100">
+            
+            <div class="header-dashboard-fissa">
+                <h1>Area privata</h1>
+
+                <div class="lato-destro-header">
+                    <a href="index.html" class="btn-esci-custom">Esci</a>
+                    <div class="avatar-css"></div>
+                </div>
+            </div>
+
+            <div class="riquadro-principale-verticale">
+                <div class="d-flex align-items-stretch layout-split h-100">
+                    
+                    <div class="nav flex-column nav-pills menu-verticale-sinistro h-100" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                        <button class="nav-link-vertical active" id="btn-tab-estratto-conto">
+                            Estratto conto
+                        </button>
+                        <button class="nav-link-vertical" id="btn-tab-investimenti">
+                            Investimenti
+                        </button>
+                    </div>
+
+                    <div class="tab-content contenuto-verticale-destro flex-grow-1" id="v-pills-tabContent">
+
+                        <div id="pane-estratto-conto" class="pannello-personalizzato">
+                            <h3 class="fw-bold mb-2 text-white">Estratto Conto Mensile</h3>
+                            <p class="text-white-50 small mb-4">Visualizzazione delle entrate e delle spese sostenute.</p>
+                            
+                            <div class="row g-3 align-items-end mb-4">
+                                <div class="col-12">
+                                    <label for="selezionaMese" class="form-label fw-semibold text-white mb-1">Seleziona Mese</label>
+                                    <select class="form-select text-white select-scura" id="selezionaMese">
+                                        <option value="01">Gennaio</option>
+                                        <option value="02">Febbraio</option>
+                                        <option value="03">Marzo</option>
+                                        <option value="04">Aprile</option>
+                                        <option value="05">Maggio</option>
+                                        <option value="06">Giugno</option>
+                                        <option value="07">Luglio</option>
+                                        <option value="08">Agosto</option>
+                                        <option value="09">Settembre</option>
+                                        <option value="10">Ottobre</option>
+                                        <option value="11">Novembre</option>
+                                        <option value="12">Dicembre</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 btn-distaccato">
+                                    <button id="btnCalcolaSpese" class="btn btn-verde-chiaro w-100 py-2.5 rounded-3">
+                                        Visualizza Flussi
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-6">
+                                    <div class="p-3 border border-success rounded-3 card-bilancio">
+                                        <div class="small text-white-50">Totale Entrate</div>
+                                        <div id="totaleEntrate" class="fs-4 fw-bold text-success">+ 0.00 €</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 border border-danger rounded-3 card-bilancio">
+                                        <div class="small text-white-50">Totale Uscite</div>
+                                        <div id="totaleSpese" class="fs-4 fw-bold text-danger">- 0.00 €</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="pane-investimenti" class="pannello-personalizzato" style="display: none;">
+                            <h3 class="fw-bold mb-2 text-white">Consigli per gli Investimenti</h3>
+                            <p class="text-white-50 small mb-4">Classifica calcolata analizzando le reti degli investitori.</p>
+
+                            <div class="table-responsive mb-4">
+                                <table class="table table-scura table-borderless mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col" style="width: 20%" class="text-white">Rank</th>
+                                            <th scope="col" style="width: 50%" class="text-white">Ragione Sociale</th>
+                                            <th scope="col" class="text-end text-white" style="width: 30%">Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabellaAziendeBody">
+                                        <tr>
+                                            <td colspan="3" class="text-center text-white-50 py-4">
+                                                Nessun dato generato. Clicca per calcolare la classifica.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <button id="btnCaricaClassifica" class="btn btn-verde-chiaro py-2.5 rounded-3 w-100 mb-4">
+                                Visualizza Classifica
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/privato-logic.js"></script>
+</body>
+</html>
