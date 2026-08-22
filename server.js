@@ -17,11 +17,11 @@ app.use('/js/axios.min.js', express.static(path.join(__dirname, 'node_modules/ax
 
 const loginRoutes = require('./routes/login');
 //const privatoRoutes = require('./routes/privato');
-//const aziendaRoutes = require('./routes/azienda');
+const aziendaRoutes = require('./routes/azienda');
 
 app.use('/api/login', loginRoutes);
 //app.use('/api/privato', privatoRoutes);
-//app.use('/api/azienda', aziendaRoutes);
+app.use('/api/azienda', aziendaRoutes);
 
 app.listen(PORT, () => {
     console.log(`==================================================`);
