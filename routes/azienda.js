@@ -13,12 +13,11 @@ router.get('/accessAnalysis', async (req, res) => {
     try {
         const db = await connectMongo();
         const ownCollection = db.collection('CompanyOwnAccount');
-        const companyIdNumber = parseInt(companyId, 10);
-
+        
         const reportAccess = await ownCollection.aggregate([
             { 
                 $match: { 
-                    companyId: companyIdNumber
+                    companyId: companyId
                 } 
             },
 
