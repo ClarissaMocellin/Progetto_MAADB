@@ -140,9 +140,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
         
-            const { riassuntoFinanziario, listaEntrate = [], listaUscite = [] } = result;
-            if (widgetIncome) widgetIncome.textContent = `+ ${riassuntoFinanziario.entrateTotali.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
-            if (widgetExpenses) widgetExpenses.textContent = `- ${riassuntoFinanziario.usciteTotali.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
+            const { financeSummary, profitList = [], spendingsList = [] } = result;
+            if (widgetIncome) widgetIncome.textContent = `+ ${financeSummary.entrateTotali.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
+            if (widgetExpenses) widgetExpenses.textContent = `- ${financeSummary.usciteTotali.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
         
             const renderTransactionItem = (tx, isIncome) => {
                 const sign = isIncome ? '+' : '-';
@@ -189,13 +189,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             };
         
-            incomeListBody.innerHTML = listaEntrate.length === 0
+            incomeListBody.innerHTML = profitList.length === 0
                 ? `<li class="list-group-item bg-transparent text-white-50 text-center small border-0 py-3">Nessun accredito ricevuto nel mese.</li>`
-                : listaEntrate.map(tx => renderTransactionItem(tx, true)).join('');
+                : profitList.map(tx => renderTransactionItem(tx, true)).join('');
         
-            expensesListBody.innerHTML = listaUscite.length === 0
+            expensesListBody.innerHTML = spendingsList.length === 0
                 ? `<li class="list-group-item bg-transparent text-white-50 text-center small border-0 py-3">Nessuna spesa o bonifico effettuato.</li>`
-                : listaUscite.map(tx => renderTransactionItem(tx, false)).join('');
+                : spendingsList.map(tx => renderTransactionItem(tx, false)).join('');
         
         } catch (error) {
             console.error("Errore durante il recupero dei flussi mensili:", error);

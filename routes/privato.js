@@ -12,21 +12,13 @@ router.get('/conti', async (req, res) => {
                 message: "Parametro 'personId' mancante nella richiesta." 
             });
         }
-        console.log("ID:", personIdstr)
         const db = await connectMongo();
-        const targetCollection = db.collection("PersonOwnAccount");
-
-        
-        const foundAccounts = await targetCollection.find({  
+        const foundAccounts = await db.collection("PersonOwnAccount").find({  
             personId: personIdstr 
         }).toArray();
 
-        const formattedResult = foundAccounts.map(conto => {
-            return {
-                accountId: conto.accountId ? conto.accountId.toString() : conto._id.toString()
-            };
-        });
-        
+        const formattedResult = foundAccounts.map(conto => ({ accountId: conto.accountId }));
+
         return res.status(200).json({
             success: true,
             accounts: formattedResult
@@ -51,10 +43,12 @@ router.get('/estratto-conto', async (req, res) => {
             return res.status(400).json({ success: false, error: "Parametri obbligatori mancanti." });
         }
 
-        const startDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, 1, 0, 0, 0, 0)).toISOString();
-        const endDate = new Date(Date.UTC(parseInt(year), parseInt(month), 1, 0, 0, 0, 0)).toISOString();
-        const startYearDate = new Date(Date.UTC(parseInt(year), 0, 1, 0, 0, 0, 0)).toISOString();
-        const endYearDate = new Date(Date.UTC(parseInt(year) + 1, 0, 1, 0, 0, 0, 0)).toISOString();
+        const yearInt = parseInt(year)
+        const monthInt = parseInt(month)
+        const startDate = new Date(Date.UTC(yearInt, monthInt - 1, 1, 0, 0, 0, 0)).toISOString();
+        const endDate = new Date(Date.UTC(yearInt, monthInt, 1, 0, 0, 0, 0)).toISOString();
+        const startYearDate = new Date(Date.UTC(yearInt, 0, 1, 0, 0, 0, 0)).toISOString();
+        const endYearDate = new Date(Date.UTC(yearInt + 1, 0, 1, 0, 0, 0, 0)).toISOString();
         sessionNeo4j = getNeo4jSession();
 
         // ============================== Neo4j ===================================
@@ -110,10 +104,6 @@ router.get('/estratto-conto', async (req, res) => {
             RETURN COLLECT({
                 intermedioId: dest.accountId,
                 finaleId: case when dest2 is not null then dest2.accountId else null end,
-                intermedioNome: "",
-                intermedioTipo: "",
-                finaleNome: "",
-                finaleTipo: "",
                 azioniTraDue: numeroAzioniMese,
                 totaleSoldiSpostati: totaleSoldiSpostatiMese,
                 azioniTraDueFinale: case when dest2 is not null then azioniTraDueFinale else 0 end,
@@ -152,14 +142,10 @@ router.get('/estratto-conto', async (req, res) => {
             RETURN COLLECT({
                 intermedioId: src.accountId,
                 finaleId: case when src2 is not null then src2.accountId else null end,
-                intermedioNome: "",
-                intermedioTipo: "",
-                finaleNome: "",
-                finaleTipo: "",
                 azioniTraDue: numeroAzioniMeseSrc,
                 totaleSoldiSpostati: coalesce(totaleSoldiSpostatiMeseSrc, 0),
                 azioniTraDueFinale: case when src2 is not null then azioniTraDueFinaleSrc else 0 end,
-                totaleSoldiSpostatiFinale: case when src2 is not null then coalesce(totaleSoldiSpostatiFinaleSrc, 0) else 0 end,
+                totaleSoldiSpostatiFinaleAnnuo: case when src2 is not null then coalesce(totaleSoldiSpostatiFinaleSrc, 0) else 0 end,
                 azioniTotaliAnnoFinale: case when src2 is not null then azioniTotaliAnnoSrc else 0 end
             }) AS listaEntrateStrutturate
         }
@@ -181,43 +167,32 @@ router.get('/estratto-conto', async (req, res) => {
 
         let totMonthSpendings = 0;
         let totMonthProfit = 0;
-        const finalSpendings = [];
-        const finalProfit = [];
+        let finalSpendings = [];
+        let finalProfit = [];
         const accountIdsToSearch = new Set();
 
         if (resultGraph.records.length > 0) {
             const record = resultGraph.records[0];
             totMonthSpendings = parseNeo4jNumber(record.get('totaleUsciteMese'));
             totMonthProfit = parseNeo4jNumber(record.get('totaleEntrateMese'));
-        
-            const structuredSpendingList = record.get('listaUscite') || [];
-            const structuredProfitList = record.get('listaEntrate') || [];
+
+            finalSpendings = record.get('listaUscite') || [];
+            finalProfit = record.get('listaEntrate') || [];
             
-            structuredSpendingList.forEach(item => {
-                const intermediateAccountId = item.intermedioId ? String(item.intermedioId) : '';
-                const finalAccountId = item.finaleId ? String(item.finaleId) : '';
-                
-                if (intermediateAccountId) accountIdsToSearch.add(intermediateAccountId);
-                if (finalAccountId) accountIdsToSearch.add(finalAccountId);
-                finalSpendings.push(item);
+            finalSpendings.forEach(item => {
+                if (item.intermedioId) accountIdsToSearch.add(item.intermedioId);
+                if (item.finaleId) accountIdsToSearch.add(item.finaleId);
             });
             
-            structuredProfitList.forEach(item => {
-                const intermediateAccountId = item.intermedioId ? String(item.intermedioId) : '';
-                const finalAccountId = item.finaleId ? String(item.finaleId) : '';
-                
-                if (intermediateAccountId) accountIdsToSearch.add(intermediateAccountId);
-                if (finalAccountId) accountIdsToSearch.add(finalAccountId);
-                finalProfit.push(item);
+            finalProfit.forEach(item => {
+                if (item.intermedioId) accountIdsToSearch.add(String(item.intermedioId));
+                if (item.finaleId) accountIdsToSearch.add(String(item.finaleId));
             });
         }
         
         // ============================== MongoDB ===================================
         const dbMongo = await connectMongo();
-        const accountIdsArray = Array.from(accountIdsToSearch).map(id => {
-            if (id && id.low !== undefined) return id.toString(); 
-            return String(id).trim();
-        });
+        const accountIdsArray = Array.from(accountIdsToSearch);
 
         const [relCompaniesAccounts, relPersonAccounts] = await Promise.all([
             accountIdsArray.length > 0
@@ -230,60 +205,53 @@ router.get('/estratto-conto', async (req, res) => {
 
         const [companies, persons] = await Promise.all([
             relCompaniesAccounts.length > 0 
-                ? dbMongo.collection('Company').find({ companyId: { $in: relCompaniesAccounts.map(l => l.companyId.toString()) } }).toArray() 
+                ? dbMongo.collection('Company').find({ companyId: { $in: relCompaniesAccounts.map(l => l.companyId) } }).toArray() 
                 : Promise.resolve([]),
             relPersonAccounts.length > 0 
-                ? dbMongo.collection('Person').find({ personId: { $in: relPersonAccounts.map(l => l.personId.toString()) } }).toArray() 
+                ? dbMongo.collection('Person').find({ personId: { $in: relPersonAccounts.map(l => l.personId) } }).toArray() 
                 : Promise.resolve([])
         ]);
 
         const personalInformationMap = new Map();
+        const companiesMap = new Map(companies.map(c => [c.companyId, c]));
+        const personsMap = new Map(persons.map(p => [p.personId, p]));
         
         relCompaniesAccounts.forEach(l => {
-            const az = companies.find(c => c.companyId.toString() === l.companyId.toString());
-            if (az) personalInformationMap.set(l.accountId.toString(), { nome: az.companyName, tipo: "Company", bloccato: az.isBlocked ?? false });
+            const az = companiesMap.get(l.companyId);
+            if (az) personalInformationMap.set(l.accountId, { nome: az.companyName, tipo: "Company", bloccato: az.isBlocked });
         });
 
         relPersonAccounts.forEach(l => {
-            const pr = persons.find(p => p.personId.toString() === l.personId.toString());
-            if (pr) personalInformationMap.set(l.accountId.toString(), { nome: pr.personName, tipo: "Person", bloccato: pr.isBlocked ?? false });
+            const pr = personsMap.get(l.personId);
+            if (pr) personalInformationMap.set(l.accountId, { nome: pr.personName, tipo: "Person", bloccato: pr.isBlocked });
         });
 
         const enrichInitialStructure = (item) => {
-            const idIntermedioStr = item.intermedioId ? item.intermedioId.toString() : '';
-            const idFinaleStr = item.finaleId ? item.finaleId.toString() : '';
-            
-            const personalInformationIntermediateAccount = personalInformationMap.get(idIntermedioStr) || {};
-            const personalInformationFinalAccount = personalInformationMap.get(idFinaleStr) || {};
+            const idIntermedioStr = item.intermedioId || '';
+            const idFinaleStr = item.finaleId || '';
             
             const getNumber = (value) => {
-                if (value === null || value === undefined) return 0;
+                if (value == null) return 0;
                 if (typeof value === 'object' && value.low !== undefined) return value.low;
                 const p = Number(value);
                 return isNaN(p) ? 0 : p;
-            };
+            };    
 
-            const monthTotalAction = getNumber(item.azioniTraDue);
-            const monthTotalMoney = parseFloat(getNumber(item.totaleSoldiSpostati).toFixed(2));
-            const monthTotalActionYear = getNumber(item.azioniTraDueFinale);
-            const monthTotalMoneyYear = parseFloat(getNumber(item.totaleSoldiSpostatiFinaleAnnuo).toFixed(2));
-            const totFinalAccountActionYear = getNumber(item.azioniTotaliAnnoFinale);
-
+            const intermediateInfo = personalInformationMap.get(idIntermedioStr) || {};
+            const finalInfo = personalInformationMap.get(idFinaleStr) || {};
+            
             return {
-                intermediateName: personalInformationIntermediateAccount.nome || `Nome Unknown ${idIntermedioStr}`,
-                intermediateType: personalInformationIntermediateAccount.tipo || "Unknown",
-                finalName: personalInformationFinalAccount.nome || `Nome Unknown ${idFinaleStr}`,
-                finalType: personalInformationFinalAccount.tipo || "Unknown",
-                monthTotalAction: monthTotalAction,
-                monthTotalActionYear: monthTotalActionYear,
-                monthTotalMoney: monthTotalMoney,
-                monthTotalMoneyYear: monthTotalMoneyYear,
-                totFinalAccountActionYear: totFinalAccountActionYear,
+                intermediateName: intermediateInfo.nome || `Nome Unknown ${idIntermedioStr}`,
+                intermediateType: intermediateInfo.tipo || "Unknown",
+                finalName: finalInfo.nome || `Nome Unknown ${idFinaleStr}`,
+                finalType: finalInfo.tipo || "Unknown",
+                monthTotalAction: getNumber(item.azioniTraDue),
+                monthTotalActionYear: getNumber(item.azioniTraDueFinale),
+                monthTotalMoney: parseFloat(getNumber(item.totaleSoldiSpostati).toFixed(2)),
+                monthTotalMoneyYear: parseFloat(getNumber(item.totaleSoldiSpostatiFinaleAnnuo).toFixed(2)),
+                totFinalAccountActionYear: getNumber(item.azioniTotaliAnnoFinale),
             };
         };
-
-        const elencoUsciteFinali = finalSpendings.map(item => enrichInitialStructure(item));
-        const elencoEntrateFinali = finalProfit.map(item => enrichInitialStructure(item));
 
         return res.json({
             success: true,
@@ -291,8 +259,8 @@ router.get('/estratto-conto', async (req, res) => {
                 entrateTotali: parseFloat(totMonthProfit.toFixed(2)),
                 usciteTotali: parseFloat(totMonthSpendings.toFixed(2)),
             },
-            listaEntrate: elencoEntrateFinali,
-            listaUscite: elencoUsciteFinali
+            profitList: finalProfit.map(item => enrichInitialStructure(item)),
+            spendingsList: finalSpendings.map(item => enrichInitialStructure(item))
         });
 
     } catch (error) {
