@@ -152,36 +152,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div style="flex-grow: 1; margin-right: 15px;">
                             
                             <div class="text-white-50 small mb-1" style="font-size: 0.8rem;">
-                                <strong>Account Intermedio: ${tx.intermedioNome}</strong>
-                                <span class="badge bg-secondary p-1 me-1" style="font-size: 0.6rem;">- ${tx.intermedioTipo}</span>
+                                <strong>Account Intermedio: ${tx.intermediateName}</strong>
+                                <span class="badge bg-secondary p-1 me-1" style="font-size: 0.6rem;">- ${tx.intermediateType}</span>
                             </div>
 
                             <div class="border-top border-secondary border-opacity-25 pt-1.5">
                                 <small class="text-white-50 d-block mb-1" style="font-size: 0.75rem;">
-                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Numero transazioni mensili: <strong class="text-white">${tx.azioniNelMese}</strong>
+                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Numero transazioni mensili: <strong class="text-white">${tx.monthTotalAction}</strong>
                                 </small>
                                 <small class="text-white-50 d-block mb-1" style="font-size: 0.75rem;">
-                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni mensili: <strong class="text-white">${sign} ${(tx.importo || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
+                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni mensili: <strong class="text-white">${sign} ${(tx.monthTotalMoney || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
                                 </small>
                             </div>
 
                             <div class="text-white fw-bold mb-1" style="font-size: 0.95rem;">
-                                <span>Account Finale: ${tx.finaleNome}</span>
-                                <span class="badge bg-primary p-1 me-1" style="font-size: 0.6rem;">- ${tx.finaleTipo}</span>
+                                <span>Account Finale: ${tx.finalName}</span>
+                                <span class="badge bg-primary p-1 me-1" style="font-size: 0.6rem;">- ${tx.finalType}</span>
                             </div>
 
                             <div class="border-top border-secondary border-opacity-25 pt-1.5">
                                 <small class="text-white-50 d-block mb-1" style="font-size: 0.75rem;">
-                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Numero transazioni annue intermediario-finale: <strong class="text-white">${tx.azioniAnnueFinale}</strong>
+                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Numero transazioni annue intermediario-finale: <strong class="text-white">${tx.monthTotalActionYear}</strong>
                                 </small>
                                 <small class="text-white-50 d-block mb-1" style="font-size: 0.75rem;">
-                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni annue intermediario-finale: <strong class="text-white">${sign} ${(tx.importoFinaleAnnuo || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
+                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni annue intermediario-finale: <strong class="text-white">${sign} ${(tx.monthTotalMoneyYear || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
                                 </small>
                             </div>
 
                             <div class="border-top border-secondary border-opacity-25 pt-1.5">
                                 <small class="text-white-50 d-block mb-1" style="font-size: 0.75rem;">
-                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni da/verso account finale: <strong class="text-white">${tx.trasferimentiRicevutiContoFinale}</strong>
+                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni da/verso account finale: <strong class="text-white">${tx.totFinalAccountActionYear}</strong>
                                 </small>
                             </div>
                         </div>

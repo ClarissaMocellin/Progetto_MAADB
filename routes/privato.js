@@ -110,16 +110,16 @@ router.get('/estratto-conto', async (req, res) => {
             RETURN COLLECT({
                 intermedioId: dest.accountId,
                 finaleId: case when dest2 is not null then dest2.accountId else null end,
-                intermedioNome: coalesce(dest.name, ""),
-                intermedioTipo: coalesce(dest.type, ""),
-                finaleNome: coalesce(dest2.name, ""),
-                finaleTipo: coalesce(dest2.type, ""),
+                intermedioNome: "",
+                intermedioTipo: "",
+                finaleNome: "",
+                finaleTipo: "",
                 azioniTraDue: numeroAzioniMese,
                 totaleSoldiSpostati: totaleSoldiSpostatiMese,
                 azioniTraDueFinale: case when dest2 is not null then azioniTraDueFinale else 0 end,
                 totaleSoldiSpostatiFinaleAnnuo: case when dest2 is not null then coalesce(totaleSoldiSpostatiFinaleAnnuo, 0) else 0 end,
                 azioniTotaliAnnoFinale: case when dest2 is not null then azioniTotaliAnno else 0 end
-            }) AS listaUsciteConsolidate
+            }) AS listaUsciteStrutturate
         }
 
         CALL (myAccount) {
@@ -152,23 +152,23 @@ router.get('/estratto-conto', async (req, res) => {
             RETURN COLLECT({
                 intermedioId: src.accountId,
                 finaleId: case when src2 is not null then src2.accountId else null end,
-                intermedioNome: coalesce(src.name, ""),
-                intermedioTipo: coalesce(src.type, ""),
-                finaleNome: coalesce(src2.name, ""),
-                finaleTipo: coalesce(src2.type, ""),
+                intermedioNome: "",
+                intermedioTipo: "",
+                finaleNome: "",
+                finaleTipo: "",
                 azioniTraDue: numeroAzioniMeseSrc,
                 totaleSoldiSpostati: coalesce(totaleSoldiSpostatiMeseSrc, 0),
                 azioniTraDueFinale: case when src2 is not null then azioniTraDueFinaleSrc else 0 end,
                 totaleSoldiSpostatiFinale: case when src2 is not null then coalesce(totaleSoldiSpostatiFinaleSrc, 0) else 0 end,
                 azioniTotaliAnnoFinale: case when src2 is not null then azioniTotaliAnnoSrc else 0 end
-            }) AS listaEntrateConsolidate
+            }) AS listaEntrateStrutturate
         }
 
         RETURN 
             totaleUsciteMese,
             totaleEntrateMese,
-            COALESCE(listaUsciteConsolidate, []) AS listaUscite,
-            COALESCE(listaEntrateConsolidate, []) AS listaEntrate
+            COALESCE(listaUsciteStrutturate, []) AS listaUscite,
+            COALESCE(listaEntrateStrutturate, []) AS listaEntrate
         `;
 
         const resultGraph = await sessionNeo4j.run(queryCypher, {
@@ -179,119 +179,117 @@ router.get('/estratto-conto', async (req, res) => {
             endYearDate: endYearDate
         });
 
-        let totaleUsciteMese = 0;
-        let totaleEntrateMese = 0;
-        const usciteFinali = [];
-        const entrateFinali = [];
-        const idContiDaCercare = new Set();
+        let totMonthSpendings = 0;
+        let totMonthProfit = 0;
+        const finalSpendings = [];
+        const finalProfit = [];
+        const accountIdsToSearch = new Set();
 
         if (resultGraph.records.length > 0) {
             const record = resultGraph.records[0];
-            totaleUsciteMese = parseNeo4jNumber(record.get('totaleUsciteMese'));
-            totaleEntrateMese = parseNeo4jNumber(record.get('totaleEntrateMese'));
+            totMonthSpendings = parseNeo4jNumber(record.get('totaleUsciteMese'));
+            totMonthProfit = parseNeo4jNumber(record.get('totaleEntrateMese'));
         
-            const usciteConsolidate = record.get('listaUscite') || [];
-            const entrateConsolidate = record.get('listaEntrate') || [];
+            const structuredSpendingList = record.get('listaUscite') || [];
+            const structuredProfitList = record.get('listaEntrate') || [];
             
-            usciteConsolidate.forEach(item => {
-                const idIntermedio = item.intermedioId ? String(item.intermedioId) : '';
-                const idFinale = item.finaleId ? String(item.finaleId) : '';
+            structuredSpendingList.forEach(item => {
+                const intermediateAccountId = item.intermedioId ? String(item.intermedioId) : '';
+                const finalAccountId = item.finaleId ? String(item.finaleId) : '';
                 
-                if (idIntermedio) idContiDaCercare.add(idIntermedio);
-                if (idFinale) idContiDaCercare.add(idFinale);
-                usciteFinali.push(item);
+                if (intermediateAccountId) accountIdsToSearch.add(intermediateAccountId);
+                if (finalAccountId) accountIdsToSearch.add(finalAccountId);
+                finalSpendings.push(item);
             });
             
-            entrateConsolidate.forEach(item => {
-                const idIntermedio = item.intermedioId ? String(item.intermedioId) : '';
-                const idFinale = item.finaleId ? String(item.finaleId) : '';
+            structuredProfitList.forEach(item => {
+                const intermediateAccountId = item.intermedioId ? String(item.intermedioId) : '';
+                const finalAccountId = item.finaleId ? String(item.finaleId) : '';
                 
-                if (idIntermedio) idContiDaCercare.add(idIntermedio);
-                if (idFinale) idContiDaCercare.add(idFinale);
-                entrateFinali.push(item);
+                if (intermediateAccountId) accountIdsToSearch.add(intermediateAccountId);
+                if (finalAccountId) accountIdsToSearch.add(finalAccountId);
+                finalProfit.push(item);
             });
         }
         
         // ============================== MongoDB ===================================
         const dbMongo = await connectMongo();
-        const arrayIdConti = Array.from(idContiDaCercare).map(id => {
+        const accountIdsArray = Array.from(accountIdsToSearch).map(id => {
             if (id && id.low !== undefined) return id.toString(); 
             return String(id).trim();
         });
 
-        const [legamiAziende, legamiPersone] = await Promise.all([
-            arrayIdConti.length > 0
-                ? dbMongo.collection('CompanyOwnAccount').find({ accountId: { $in: arrayIdConti } }).toArray()
+        const [relCompaniesAccounts, relPersonAccounts] = await Promise.all([
+            accountIdsArray.length > 0
+                ? dbMongo.collection('CompanyOwnAccount').find({ accountId: { $in: accountIdsArray } }).toArray()
                 : Promise.resolve([]),
-            arrayIdConti.length > 0
-                ? dbMongo.collection('PersonOwnAccount').find({ accountId: { $in: arrayIdConti } }).toArray()
+            accountIdsArray.length > 0
+                ? dbMongo.collection('PersonOwnAccount').find({ accountId: { $in: accountIdsArray } }).toArray()
                 : Promise.resolve([])
         ]);
 
-        console.log(legamiAziende, legamiPersone);
-
-        const [aziende, persone] = await Promise.all([
-            legamiAziende.length > 0 
-                ? dbMongo.collection('Company').find({ companyId: { $in: legamiAziende.map(l => l.companyId.toString()) } }).toArray() 
+        const [companies, persons] = await Promise.all([
+            relCompaniesAccounts.length > 0 
+                ? dbMongo.collection('Company').find({ companyId: { $in: relCompaniesAccounts.map(l => l.companyId.toString()) } }).toArray() 
                 : Promise.resolve([]),
-            legamiPersone.length > 0 
-                ? dbMongo.collection('Person').find({ personId: { $in: legamiPersone.map(l => l.personId.toString()) } }).toArray() 
+            relPersonAccounts.length > 0 
+                ? dbMongo.collection('Person').find({ personId: { $in: relPersonAccounts.map(l => l.personId.toString()) } }).toArray() 
                 : Promise.resolve([])
         ]);
 
-        const mappaAnagrafiche = new Map();
+        const personalInformationMap = new Map();
         
-        legamiAziende.forEach(l => {
-            const az = aziende.find(c => c.companyId.toString() === l.companyId.toString());
-            if (az) mappaAnagrafiche.set(l.accountId.toString(), { nome: az.companyName, tipo: "Company", bloccato: az.isBlocked ?? false });
+        relCompaniesAccounts.forEach(l => {
+            const az = companies.find(c => c.companyId.toString() === l.companyId.toString());
+            if (az) personalInformationMap.set(l.accountId.toString(), { nome: az.companyName, tipo: "Company", bloccato: az.isBlocked ?? false });
         });
 
-        legamiPersone.forEach(l => {
-            const pr = persone.find(p => p.personId.toString() === l.personId.toString());
-            if (pr) mappaAnagrafiche.set(l.accountId.toString(), { nome: pr.personName, tipo: "Person", bloccato: pr.isBlocked ?? false });
+        relPersonAccounts.forEach(l => {
+            const pr = persons.find(p => p.personId.toString() === l.personId.toString());
+            if (pr) personalInformationMap.set(l.accountId.toString(), { nome: pr.personName, tipo: "Person", bloccato: pr.isBlocked ?? false });
         });
 
-        const arricchisciFlussoConsolidato = (item) => {
+        const enrichInitialStructure = (item) => {
             const idIntermedioStr = item.intermedioId ? item.intermedioId.toString() : '';
             const idFinaleStr = item.finaleId ? item.finaleId.toString() : '';
             
-            const anagraficaIntermedio = mappaAnagrafiche.get(idIntermedioStr) || {};
-            const anagraficaFinale = mappaAnagrafiche.get(idFinaleStr) || {};
+            const personalInformationIntermediateAccount = personalInformationMap.get(idIntermedioStr) || {};
+            const personalInformationFinalAccount = personalInformationMap.get(idFinaleStr) || {};
             
-            const getNumero = (valore) => {
-                if (valore === null || valore === undefined) return 0;
-                if (typeof valore === 'object' && valore.low !== undefined) return valore.low;
-                const p = Number(valore);
+            const getNumber = (value) => {
+                if (value === null || value === undefined) return 0;
+                if (typeof value === 'object' && value.low !== undefined) return value.low;
+                const p = Number(value);
                 return isNaN(p) ? 0 : p;
             };
 
-            const azioniMese = getNumero(item.azioniTraDue);
-            const soldiSpostati = parseFloat(getNumero(item.totaleSoldiSpostati).toFixed(2));
-            const azioniAnnueFinale = getNumero(item.azioniTraDueFinale);
-            const soldiSpostatiFinaleAnnuo = parseFloat(getNumero(item.totaleSoldiSpostatiFinaleAnnuo).toFixed(2));
-            const azioniAnno = getNumero(item.azioniTotaliAnnoFinale);
+            const monthTotalAction = getNumber(item.azioniTraDue);
+            const monthTotalMoney = parseFloat(getNumber(item.totaleSoldiSpostati).toFixed(2));
+            const monthTotalActionYear = getNumber(item.azioniTraDueFinale);
+            const monthTotalMoneyYear = parseFloat(getNumber(item.totaleSoldiSpostatiFinaleAnnuo).toFixed(2));
+            const totFinalAccountActionYear = getNumber(item.azioniTotaliAnnoFinale);
 
             return {
-                intermedioNome: anagraficaIntermedio.nome || `Nome Unknown ${idIntermedioStr}`,
-                intermedioTipo: anagraficaIntermedio.tipo || "Unknown",
-                finaleNome: anagraficaFinale.nome || `Nome Unknown ${idFinaleStr}`,
-                finaleTipo: anagraficaFinale.tipo || "Unknown",
-                azioniNelMese: azioniMese,
-                azioniAnnueFinale: azioniAnnueFinale,
-                importo: soldiSpostati,
-                importoFinaleAnnuo: soldiSpostatiFinaleAnnuo,
-                trasferimentiRicevutiContoFinale: azioniAnno,
+                intermediateName: personalInformationIntermediateAccount.nome || `Nome Unknown ${idIntermedioStr}`,
+                intermediateType: personalInformationIntermediateAccount.tipo || "Unknown",
+                finalName: personalInformationFinalAccount.nome || `Nome Unknown ${idFinaleStr}`,
+                finalType: personalInformationFinalAccount.tipo || "Unknown",
+                monthTotalAction: monthTotalAction,
+                monthTotalActionYear: monthTotalActionYear,
+                monthTotalMoney: monthTotalMoney,
+                monthTotalMoneyYear: monthTotalMoneyYear,
+                totFinalAccountActionYear: totFinalAccountActionYear,
             };
         };
 
-        const elencoUsciteFinali = usciteFinali.map(item => arricchisciFlussoConsolidato(item));
-        const elencoEntrateFinali = entrateFinali.map(item => arricchisciFlussoConsolidato(item));
+        const elencoUsciteFinali = finalSpendings.map(item => enrichInitialStructure(item));
+        const elencoEntrateFinali = finalProfit.map(item => enrichInitialStructure(item));
 
         return res.json({
             success: true,
             riassuntoFinanziario: {
-                entrateTotali: parseFloat(totaleEntrateMese.toFixed(2)),
-                usciteTotali: parseFloat(totaleUsciteMese.toFixed(2)),
+                entrateTotali: parseFloat(totMonthProfit.toFixed(2)),
+                usciteTotali: parseFloat(totMonthSpendings.toFixed(2)),
             },
             listaEntrate: elencoEntrateFinali,
             listaUscite: elencoUsciteFinali
