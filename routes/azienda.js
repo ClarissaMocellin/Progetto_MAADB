@@ -1,4 +1,3 @@
-// routes/azienda.js
 const express = require('express');
 const router = express.Router();
 const connectMongo = require('../config/mongo');

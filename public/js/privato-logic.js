@@ -140,9 +140,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
         
-            const { financeSummary, profitList = [], spendingsList = [] } = result;
-            if (widgetIncome) widgetIncome.textContent = `+ ${financeSummary.entrateTotali.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
-            if (widgetExpenses) widgetExpenses.textContent = `- ${financeSummary.usciteTotali.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
+            const { financialSummary, profitList = [], spendingsList = [] } = result;
+            if (widgetIncome) widgetIncome.textContent = `+ ${financialSummary.totalProfit.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
+            if (widgetExpenses) widgetExpenses.textContent = `- ${financialSummary.totalSpendings.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
         
             const renderTransactionItem = (tx, isIncome) => {
                 const sign = isIncome ? '+' : '-';
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             
                             <div class="text-white-50 small mb-1" style="font-size: 0.8rem;">
                                 <strong>Account Intermedio: ${tx.intermediateName}</strong>
-                                <span class="badge bg-secondary p-1 me-1" style="font-size: 0.6rem;">- ${tx.intermediateType}</span>
+                                <span class="bg-secondary p-1 me-1" style="font-size: 0.6rem;">- ${tx.intermediateType}</span>
                             </div>
 
                             <div class="border-top border-secondary border-opacity-25 pt-1.5">
@@ -167,7 +167,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             <div class="text-white fw-bold mb-1" style="font-size: 0.95rem;">
                                 <span>Account Finale: ${tx.finalName}</span>
-                                <span class="badge bg-primary p-1 me-1" style="font-size: 0.6rem;">- ${tx.finalType}</span>
+                                <span class="bg-primary p-1 me-1" style="font-size: 0.6rem;">- ${tx.finalType}</span>
+                                <span class="bg-primary p-1 me-1" style="font-size: 0.6rem;">- ${tx.finalBlocked}</span>
                             </div>
 
                             <div class="border-top border-secondary border-opacity-25 pt-1.5">
@@ -211,6 +212,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     }            
 
     async function loadCompanyRanking() {
-        console.log("Query ancora da implementare.");
+        const tbody = document.getElementById('tabellaAziendeBody');
+        const btn = document.getElementById('btnCaricaClassifica');
+        
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Caricamento...';
+        }
+    
+        try {
+            const response = await fetch('/api/privato/classifica-investitori');
+            const data = await response.json();
+    
+            if (!data.success || !data.ranking || data.ranking.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="text-center text-white-50 py-4">
+                            Nessuna azienda disponibile in classifica.
+                        </td>
+                    </tr>`;
+                return;
+            }
+    
+            tbody.innerHTML = '';
+            data.ranking.forEach((company, index) => {
+                const rank = index + 1;
+                const row = document.createElement('tr');
+                row.className = "align-middle border-bottom border-secondary border-opacity-10";
+                row.innerHTML = `
+                    <td class="text-white fw-bold py-3">#${rank}</td>
+                    <td class="py-3">
+                        <div class="text-white fw-semibold">${company.companyName}</div>
+                        <div class="text-white-50 small" style="font-size: 0.75rem;">ID: ${company.companyId}</div>
+                        <div class="text-verde-chiaro fw-bold fs-5">Score pesato affidabilità: ${company.finalInvestmentScore}</div>
+                    </td>
+                    <td class="text-end py-3">
+                        <div class="text-white-50 small">Dovuto: €${company.totLoan}</div>
+                        <div class="text-white-50 small">Rest.: €${company.totRepay}</div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        } catch (error) {
+            console.error("Errore nel caricamento della classifica:", error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center text-danger py-4">
+                        Si è verificato un errore durante il recupero dei dati.
+                    </td>
+                </tr>`;
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Visualizza Classifica';
+            }
+        }
     }
 });

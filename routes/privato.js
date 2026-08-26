@@ -53,7 +53,7 @@ router.get('/estratto-conto', async (req, res) => {
 
         // ============================== Neo4j ===================================
         const queryCypher = `
-        MATCH (myAccount:Account {accountId: $idSelectedAccount})
+        MATCH (myAccount:Account {fromId: $idSelectedAccount})
 
         CALL (myAccount) {
             CALL (myAccount) {
@@ -102,8 +102,8 @@ router.get('/estratto-conto', async (req, res) => {
             }
         
             RETURN COLLECT({
-                intermedioId: dest.accountId,
-                finaleId: case when dest2 is not null then dest2.accountId else null end,
+                intermedioId: dest.fromId,
+                finaleId: case when dest2 is not null then dest2.fromId else null end,
                 azioniTraDue: numeroAzioniMese,
                 totaleSoldiSpostati: totaleSoldiSpostatiMese,
                 azioniTraDueFinale: case when dest2 is not null then azioniTraDueFinale else 0 end,
@@ -140,8 +140,8 @@ router.get('/estratto-conto', async (req, res) => {
             }
             
             RETURN COLLECT({
-                intermedioId: src.accountId,
-                finaleId: case when src2 is not null then src2.accountId else null end,
+                intermedioId: src.fromId,
+                finaleId: case when src2 is not null then src2.fromId else null end,
                 azioniTraDue: numeroAzioniMeseSrc,
                 totaleSoldiSpostati: coalesce(totaleSoldiSpostatiMeseSrc, 0),
                 azioniTraDueFinale: case when src2 is not null then azioniTraDueFinaleSrc else 0 end,
@@ -185,8 +185,8 @@ router.get('/estratto-conto', async (req, res) => {
             });
             
             finalProfit.forEach(item => {
-                if (item.intermedioId) accountIdsToSearch.add(String(item.intermedioId));
-                if (item.finaleId) accountIdsToSearch.add(String(item.finaleId));
+                if (item.intermedioId) accountIdsToSearch.add(item.intermedioId);
+                if (item.finaleId) accountIdsToSearch.add(item.finaleId);
             });
         }
         
@@ -205,10 +205,21 @@ router.get('/estratto-conto', async (req, res) => {
 
         const [companies, persons] = await Promise.all([
             relCompaniesAccounts.length > 0 
-                ? dbMongo.collection('Company').find({ companyId: { $in: relCompaniesAccounts.map(l => l.companyId) } }).toArray() 
+                ? dbMongo.collection('Company')
+                    .find(
+                        { companyId: { $in: relCompaniesAccounts.map(l => l.companyId) } },
+                        { projection: { companyId: 1, companyName: 1, isBlocked: 1 } }
+                    )
+                    .toArray() 
                 : Promise.resolve([]),
+                
             relPersonAccounts.length > 0 
-                ? dbMongo.collection('Person').find({ personId: { $in: relPersonAccounts.map(l => l.personId) } }).toArray() 
+                ? dbMongo.collection('Person')
+                    .find(
+                        { personId: { $in: relPersonAccounts.map(l => l.personId) } },
+                        { projection: { personId: 1, personName: 1, isBlocked: 1 } }
+                    )
+                    .toArray() 
                 : Promise.resolve([])
         ]);
 
@@ -226,16 +237,16 @@ router.get('/estratto-conto', async (req, res) => {
             if (pr) personalInformationMap.set(l.accountId, { nome: pr.personName, tipo: "Person", bloccato: pr.isBlocked });
         });
 
+        const getNumber = (value) => {
+            if (value == null) return 0;
+            if (typeof value === 'object' && value.low !== undefined) return value.low;
+            const p = Number(value);
+            return isNaN(p) ? 0 : p;
+        };
+
         const enrichInitialStructure = (item) => {
             const idIntermedioStr = item.intermedioId || '';
-            const idFinaleStr = item.finaleId || '';
-            
-            const getNumber = (value) => {
-                if (value == null) return 0;
-                if (typeof value === 'object' && value.low !== undefined) return value.low;
-                const p = Number(value);
-                return isNaN(p) ? 0 : p;
-            };    
+            const idFinaleStr = item.finaleId || '';    
 
             const intermediateInfo = personalInformationMap.get(idIntermedioStr) || {};
             const finalInfo = personalInformationMap.get(idFinaleStr) || {};
@@ -245,6 +256,7 @@ router.get('/estratto-conto', async (req, res) => {
                 intermediateType: intermediateInfo.tipo || "Unknown",
                 finalName: finalInfo.nome || `Nome Unknown ${idFinaleStr}`,
                 finalType: finalInfo.tipo || "Unknown",
+                finalBlocked: finalInfo.nome ? "Attivo" : "Unknoun",
                 monthTotalAction: getNumber(item.azioniTraDue),
                 monthTotalActionYear: getNumber(item.azioniTraDueFinale),
                 monthTotalMoney: parseFloat(getNumber(item.totaleSoldiSpostati).toFixed(2)),
@@ -255,21 +267,176 @@ router.get('/estratto-conto', async (req, res) => {
 
         return res.json({
             success: true,
-            riassuntoFinanziario: {
-                entrateTotali: parseFloat(totMonthProfit.toFixed(2)),
-                usciteTotali: parseFloat(totMonthSpendings.toFixed(2)),
+            financialSummary: {
+                totalProfit: parseFloat(totMonthProfit.toFixed(2)),
+                totalSpendings: parseFloat(totMonthSpendings.toFixed(2)),
             },
             profitList: finalProfit.map(item => enrichInitialStructure(item)),
             spendingsList: finalSpendings.map(item => enrichInitialStructure(item))
         });
 
     } catch (error) {
-        console.error("Errore nel calcolo federato:", error);
+        console.error("Errore nel calcolo:", error);
         return res.status(500).json({ success: false, error: "Errore interno del server." });
     } finally {
         if (sessionNeo4j) {
             await sessionNeo4j.close();
         }
+    }
+});
+
+router.get('/classifica-investitori', async (req, res) => {
+    let neo4jSession;
+    console.log("inizio richiesta")
+    try {
+        // ============================== MongoDB ===========================================
+        const mongoDb = await connectMongo();
+        
+        const activeCompanies = await mongoDb.collection('Company')
+            .find({ isBlocked: { $ne: true } })
+            .project({ companyId: 1, companyName: 1 })
+            .toArray();
+
+        const activeCompanyIds = activeCompanies.map(company => company.companyId.toString());
+        if (activeCompanyIds.length === 0) {
+            return res.status(200).json({
+                success: true,
+                ranking: []
+            });
+        }
+
+        const companyNamesMap = {};
+        activeCompanies.forEach(c => {
+            companyNamesMap[c.companyId] = c.companyName;
+        });
+
+        // ================================== Neo4j =======================================
+        neo4jSession = getNeo4jSession();
+
+        const cypherQuery = `
+            MATCH (companyAccount:Company)
+            WHERE companyAccount.investorId IN $activeCompanyIds
+            
+            OPTIONAL MATCH (directInvestor)-[:INVEST_IN]->(companyAccount)
+            WHERE directInvestor <> companyAccount AND (directInvestor:Person OR directInvestor:Company)
+            WITH companyAccount, 
+                COLLECT(DISTINCT directInvestor) AS directNodesList,
+                COUNT(DISTINCT directInvestor) AS directInvestorsCount
+            
+            OPTIONAL MATCH (indirectInvestor)-[:INVEST_IN]->(middle)-[:INVEST_IN]->(companyAccount)
+            WHERE indirectInvestor <> companyAccount 
+                AND indirectInvestor <> middle
+                AND (indirectInvestor:Person OR indirectInvestor:Company)
+                AND NOT indirectInvestor IN directNodesList
+            
+            RETURN companyAccount.investorId AS companyId,
+                directInvestorsCount,
+                COUNT(DISTINCT indirectInvestor) AS indirectInvestors        
+        `;
+
+        // ==================== MongoDB ====================
+        const [graphResult, mongoLoansData] = await Promise.all([
+            neo4jSession.run(cypherQuery, { activeCompanyIds }),
+            mongoDb.collection('CompanyApplyLoan').aggregate([
+                {
+                    $match: {
+                        companyId: { $in: activeCompanyIds }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'Loan',
+                        localField: 'loanId',
+                        foreignField: 'loanId',
+                        as: 'loanDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'AccountRepayLoan',
+                        localField: 'loanId',
+                        foreignField: 'loanId',
+                        as: 'repayDetails'
+                    }
+                },
+                {
+                    $project: {
+                        companyId: 1,
+                        loanAmount: { $ifNull: [ { $arrayElemAt: [ "$loanDetails.loanAmount", 0 ] }, 0 ] },
+                        repayAmount: { $sum: "$repayDetails.amount" }
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$companyId",
+                        totalLoanAmount: { $sum: "$loanAmount" },
+                        totalRepayAmount: { $sum: "$repayAmount" }
+                    }
+                }
+            ]).toArray()                     
+        ]);
+        console.log("terminata richiesta a neo4j e mongo2:")
+        const getSafeNumber = (value) => {
+            if (value == null) return 0;
+            if (typeof value === 'object' && value.low !== undefined) return value.low;
+            const parsed = Number(value);
+            return isNaN(parsed) ? 0 : parsed;
+        };
+
+        const networkCredibilityMap = {};
+        graphResult.records.forEach(record => {
+            const cId = record.get('companyId');
+            networkCredibilityMap[cId] = {
+                directInvestors: getSafeNumber(record.get('directInvestorsCount')),
+                indirectInvestors: getSafeNumber(record.get('indirectInvestors'))
+            };
+        });
+
+        const financialMap = {};
+        activeCompanyIds.forEach(id => {
+            financialMap[id] = { totalLoanAmount: 0, totalRepayAmount: 0 };
+        });
+
+        mongoLoansData.forEach(item => {
+            if (item._id) {
+                const cId = item._id.toString();
+                if (financialMap[cId]) {
+                    financialMap[cId].totalLoanAmount = item.totalLoanAmount || 0;
+                    financialMap[cId].totalRepayAmount = item.totalRepayAmount || 0;
+                }
+            }
+        });
+
+        const companyRanking = activeCompanyIds.map(companyId => {
+            const network = networkCredibilityMap[companyId] || { directInvestors: 0, indirectInvestors: 0 };
+            const finance = financialMap[companyId];
+            const totLoan = finance.totalLoanAmount;
+            const totRepay = finance.totalRepayAmount;
+            const finalScore = (network.directInvestors * 1.0) + 
+                               (network.indirectInvestors * 0.5);
+
+            return {
+                companyId: companyId,
+                companyName: companyNamesMap[companyId] || "Unknown Company",
+                totLoan: totLoan,
+                totRepay: parseFloat(totRepay.toFixed(2)),
+                finalInvestmentScore: parseFloat(finalScore.toFixed(2))
+            };
+        });
+
+        companyRanking.sort((a, b) => b.finalInvestmentScore - a.finalInvestmentScore);
+        const top20Ranking = companyRanking.slice(0, 20);
+
+        return res.status(200).json({
+            success: true,
+            ranking: top20Ranking
+        });
+
+    } catch (error) {
+        console.error("Errore nel recupero della classifica:", error);
+        return res.status(500).json({ success: false, error: error.message });
+    } finally {
+        if (neo4jSession) await neo4jSession.close();
     }
 });
 
