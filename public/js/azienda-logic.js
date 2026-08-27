@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const companyId = localStorage.getItem('idProfile');
     const companyName = localStorage.getItem('nameProfile');
+    const companyCountry = localStorage.getItem('countryProfile');
 
     if (!companyId) {
         alert("Accesso non autorizzato. Effettua prima il login.");
@@ -59,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         try {
-            const response = await axios.get(`/api/azienda/accessAnalysis?companyId=${companyId}`);
+            const response = await axios.get(`/api/azienda/analisi-accessi?companyId=${companyId}`);
             const result = response.data;
 
             if (result.success) {
@@ -77,10 +78,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 boxRisultati.innerHTML = accessData.map(methodData => {
                     const risksBreakdownHTML = methodData.riskBreakdown.map(risk => {
                         const blockRateCalculation = risk.count > 0 ? (risk.blocked / risk.count) * 100 : 0;
-                        
-                        const redRisks = ["critical", "severe", "extreme", "high", "very high"];
-                        const yellowRisks = ["significant", "moderate"];
-                        const greenRisks = ["minimal", "low"];
                         const currentLevel = risk.level.toLowerCase().trim(); 
 
                         if (currentLevel.includes("critical") || currentLevel.includes("severe") || currentLevel.includes("extreme") || currentLevel.includes("high")) {
@@ -127,6 +124,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function searchTopInvestors() {
-        console.log("Query ancora da implementare.");
+        const tbody = document.getElementById('tabellaInvestitoriBody');
+        const btn = document.getElementById('btnCercaInvestitori');
+        
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Caricamento...';
+        }
+    
+        try {
+            const response = await axios.get(`/api/azienda/potenziali-investitori?companyCountry=${companyCountry}`);
+            const data = response.data;
+    
+            if (!data.success || !data.leadClassifica || data.leadClassifica.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="text-center text-white-50 py-4">
+                            Nessun possibile investitore disponibile in classifica.
+                        </td>
+                    </tr>`;
+                return;
+            }
+    
+            tbody.innerHTML = '';
+            data.leadClassifica.forEach((person, index) => {
+                const rank = index + 1;
+                const row = document.createElement('tr');
+                row.className = "align-middle border-bottom border-secondary border-opacity-10";
+                row.innerHTML = `
+                    <td class="text-white fw-bold py-3">#${rank}</td>
+                    <td class="py-3">
+                        <div class="text-white fw-semibold">${person.personName}</div>
+                        <div class="text-white-50 small" style="font-size: 0.75rem;">ID: ${person.personId}</div>
+                    </td>
+                    <td class="text-end py-3">
+                    <div class="text-verde-chiaro fw-bold fs-5">${person.affidability}</div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        } catch (error) {
+            console.error("Errore nel caricamento della classifica:", error);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center text-danger py-4">
+                        Si è verificato un errore durante il recupero dei dati.
+                    </td>
+                </tr>`;
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Visualizza Classifica';
+            }
+        }
     }
 });
