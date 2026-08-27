@@ -3,7 +3,6 @@ const router = express.Router();
 const connectMongo = require('../config/mongo');
 
 router.post('/extractProfiles', async (req, res) => {
-    console.log(req.body);
     const { role, name } = req.body;
     const collectionName = role === 'azienda' ? 'Company' : 'Person';
     const erroreTesto = role === 'azienda' ? "Nessuna azienda attiva trovata con questo nome." : "Nessun utente attivo trovato con questo nome";
@@ -23,7 +22,7 @@ router.post('/extractProfiles', async (req, res) => {
             return res.status(404).json({ success: false, error: erroreTesto });
         }
     
-        const entityList = records.map(item => ({ id: item[`${partialName}Id`], name: item[`${partialName}Name`] }));
+        const entityList = records.map(item => ({ id: item[`${partialName}Id`], name: item[`${partialName}Name`], country: item["country"] }));
         return res.json({ success: true, entity: entityList });
     
     } catch (error) {

@@ -9,7 +9,7 @@ async function connectMongo() {
         if (dbInstance) return dbInstance;
 
         await client.connect();
-        console.log("Connessione a MongoDB completata con successo!");
+        console.log("Connessione a MongoDB completata con successo.");
         dbInstance = client.db(); 
         
         return dbInstance;

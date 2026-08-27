@@ -8,6 +8,7 @@ const databaseName = process.env.NEO4J_DATABASE || 'neo4j';
 const driver = neo4j.driver(uri, neo4j.auth.basic(user, password));
 
 function getNeo4jSession() {
+    console.log("Connessione a Neo4j completata con successo.");
     return driver.session({ database: databaseName });
 }
 

@@ -221,8 +221,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     
         try {
-            const response = await fetch('/api/privato/classifica-investitori');
-            const data = await response.json();
+            const response = await axios.get('/api/privato/classifica-investitori');
+            const data = response.data;
     
             if (!data.success || !data.ranking || data.ranking.length === 0) {
                 tbody.innerHTML = `

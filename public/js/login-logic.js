@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (result.success) {
                 optionList.innerHTML = result.entity.map(entity => `
-                    <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center btn-esci-custom" data-id="${entity.id}" data-name="${entity.name}">
+                    <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center btn-esci-custom" data-id="${entity.id}" data-name="${entity.name}" data-country="${entity.country}">
                     <div class="fw-bold text-success">${entity.name}</div>
                     <small class="text-white-50">ID Account: ${entity.id}</small>
                     </button>
@@ -33,9 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         const target = e.currentTarget;
                         const id = target.getAttribute('data-id');
                         const name = target.getAttribute('data-name');
+                        const country = target.getAttribute('data-country');
 
                         localStorage.setItem('nameProfile', name);
                         localStorage.setItem('idProfile', id);
+                        localStorage.setItem('countryProfile', country);
 
                         window.location.href = currentRole === 'azienda' ? 'azienda.html' : 'privato.html';
                     });

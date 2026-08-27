@@ -287,7 +287,7 @@ router.get('/estratto-conto', async (req, res) => {
 
 router.get('/classifica-investitori', async (req, res) => {
     let neo4jSession;
-    console.log("inizio richiesta")
+    
     try {
         // ============================== MongoDB ===========================================
         const mongoDb = await connectMongo();
@@ -375,7 +375,7 @@ router.get('/classifica-investitori', async (req, res) => {
                 }
             ]).toArray()                     
         ]);
-        console.log("terminata richiesta a neo4j e mongo2:")
+        
         const getSafeNumber = (value) => {
             if (value == null) return 0;
             if (typeof value === 'object' && value.low !== undefined) return value.low;
