@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     const loginSection = document.getElementById('sezione-login');
-    const selectSection = document.getElementById('sezione-selezione');
+    const selectAccountSection = document.getElementById('sezione-selezione');
     const optionList = document.getElementById('lista-opzioni');
     const backButton = document.getElementById('btn-indietro');
     let currentRole = '';
@@ -21,19 +21,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = response.data;
 
             if (result.success) {
-                optionList.innerHTML = result.entity.map(entity => `
-                    <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center btn-esci-custom" data-id="${entity.id}" data-name="${entity.name}" data-country="${entity.country}">
-                    <div class="fw-bold text-success">${entity.name}</div>
-                    <small class="text-white-50">ID Account: ${entity.id}</small>
+                optionList.innerHTML = result.user.map(user => `
+                    <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center btn-esci-custom" data-id="${user.id}" data-name="${user.name}" data-country="${user.country}">
+                    <div class="fw-bold text-success">${user.name}</div>
+                    <small class="text-white-50">ID Account: ${user.id}</small>
                     </button>
                 `).join('');
 
                 optionList.querySelectorAll('button').forEach(button => {
                     button.addEventListener('click', (e) => {
-                        const target = e.currentTarget;
-                        const id = target.getAttribute('data-id');
-                        const name = target.getAttribute('data-name');
-                        const country = target.getAttribute('data-country');
+                        const selectedUser = e.currentTarget;
+                        const id = selectedUser.getAttribute('data-id');
+                        const name = selectedUser.getAttribute('data-name');
+                        const country = selectedUser.getAttribute('data-country');
 
                         localStorage.setItem('nameProfile', name);
                         localStorage.setItem('idProfile', id);
@@ -44,8 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 loginSection.style.display = 'none';
-                selectSection.style.display = 'block';
+                selectAccountSection.style.display = 'block';
             }
+
         } catch (error) {
             optionList.innerHTML = `
                 <div class="list-group-item bg-dark text-warning text-center py-4 border-0">
@@ -57,12 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             
             loginSection.style.display = 'none';
-            selectSection.style.display = 'block';
+            selectAccountSection.style.display = 'block';
         }
     });
 
     backButton.addEventListener('click', () => {
-        selectSection.style.display = 'none';
         loginSection.style.display = 'block';
+        selectAccountSection.style.display = 'none';
     });
 });
