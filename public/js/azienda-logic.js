@@ -111,13 +111,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (btnSearchInvestors) {
             btnSearchInvestors.disabled = true;
             btnSearchInvestors.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Caricamento...';
-       }
+        }
     
         try {
-            const response = await axios.get(`/api/azienda/potenziali-investitori?companyCountry=${companyCountry}`);
+            const response = await axios.get(`/api/azienda/searchInvestors?companyCountry=${companyCountry}`);
             const data = response.data;
     
-            if (!data.success || !data.leadClassifica || data.leadClassifica.length === 0) {
+            if (!data.success || !data.rankingCandidates || data.rankingCandidates.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="3" class="text-center text-white-50 py-4">
@@ -125,10 +125,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </td>
                     </tr>`;
                 return;
-           }
+            }
     
             tbody.innerHTML = '';
-            data.leadClassifica.forEach((person, index) => {
+            data.rankingCandidates.forEach((person, index) => {
                 const rank = index + 1;
                 const row = document.createElement('tr');
                 row.className = "align-middle border-bottom border-secondary border-opacity-10";
@@ -143,8 +143,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </td>
                 `;
                 tbody.appendChild(row);
-           });
-       } catch (error) {
+            });
+
+        } catch (error) {
             console.error("Errore nel caricamento della classifica:", error);
             tbody.innerHTML = `
                 <tr>
@@ -152,11 +153,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         Si è verificato un errore durante il recupero dei dati.
                     </td>
                 </tr>`;
-       } finally {
+        } finally {
             if (btnSearchInvestors) {
                 btnSearchInvestors.disabled = false;
                 btnSearchInvestors.innerHTML = 'Visualizza Classifica';
-           }
-       }
-   }
+            }
+        }
+    }
 });
