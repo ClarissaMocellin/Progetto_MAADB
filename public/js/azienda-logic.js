@@ -9,50 +9,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    const title = document.getElementById('titolo-benvenuto');
-    if (title && companyName) {
-        title.textContent = `Dashboard Aziendale: ${companyName}`;
-    }
+    document.getElementById('titolo-dashboard').textContent += `: ${companyName}`;
+    const btnTabSecurity = document.getElementById('btn-tab-sicurezza');
+    const btnTabInvestors = document.getElementById('btn-tab-investitori');
+    const paneSecurity = document.getElementById('pane-sicurezza');
+    const paneInvestors = document.getElementById('pane-investitori');
 
-    const btnTabSicurezza = document.getElementById('btn-tab-sicurezza');
-    const btnTabInvestitori = document.getElementById('btn-tab-investitori');
-    const paneSicurezza = document.getElementById('pane-sicurezza');
-    const paneInvestitori = document.getElementById('pane-investitori');
-
-    if (btnTabSicurezza && btnTabInvestitori) {
-        btnTabSicurezza.addEventListener('click', () => {
-            paneSicurezza.style.display = 'block';
-            paneInvestitori.style.display = 'none';
-            btnTabSicurezza.classList.add('active');
-            btnTabInvestitori.classList.remove('active');
+    if (btnTabSecurity && btnTabInvestors) {
+        btnTabSecurity.addEventListener('click', () => {
+            paneSecurity.style.display = 'block';
+            paneInvestors.style.display = 'none';
+            btnTabSecurity.classList.add('active');
+            btnTabInvestors.classList.remove('active');
         });
 
-        btnTabInvestitori.addEventListener('click', () => {
-            paneSicurezza.style.display = 'none';
-            paneInvestitori.style.display = 'block';
-            btnTabSicurezza.classList.remove('active');
-            btnTabInvestitori.classList.add('active');
+        btnTabInvestors.addEventListener('click', () => {
+            paneSecurity.style.display = 'none';
+            paneInvestors.style.display = 'block';
+            btnTabSecurity.classList.remove('active');
+            btnTabInvestors.classList.add('active');
         });
     }
 
-    const btnVerificaAccessi = document.getElementById('btnVerificaAccessi');
-    const btnCercaInvestitori = document.getElementById('btnCercaInvestitori');
+    const btnVerifyAccess = document.getElementById('btnVerificaAccessi');
+    const btnSearchInvestors = document.getElementById('btnCercaInvestitori');
 
-    if (btnVerificaAccessi) {
-        btnVerificaAccessi.addEventListener('click', analyseAccessChannels);
-    }
+    btnVerifyAccess.addEventListener('click', accessChannels);
+    btnSearchInvestors.addEventListener('click', searchTopInvestors);
     
-    if (btnCercaInvestitori) {
-        btnCercaInvestitori.addEventListener('click', searchTopInvestors);
-    }
-    
-    async function analyseAccessChannels() {
-        const boxRisultati = document.getElementById('boxRisultatiSicurezza');
-        const btnVerifica = document.getElementById('btnVerificaAccessi');
+    // ------------------------ query 2 ------------------------
+    async function accessChannels() {
+        const boxResults = document.getElementById('boxRisultatiSicurezza');
 
-        if (!boxRisultati || !btnVerifica) return;
-
-        boxRisultati.innerHTML = `
+        boxResults.innerHTML = `
             <div class="text-center text-success py-2">
                 <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                 Elaborazione dei dati in corso, attendere...
@@ -60,62 +49,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
 
         try {
-            const response = await axios.get(`/api/azienda/analisi-accessi?companyId=${companyId}`);
+            const response = await axios.get(`/api/azienda/accessAnalysis?companyId=${companyId}`);
             const result = response.data;
-
+            
             if (result.success) {
                 const accessData = result.data;
 
                 if (accessData.length === 0) {
-                    boxRisultati.innerHTML = `
+                    boxResults.innerHTML = `
                         <div class="alert alert-dark border-secondary text-center text-white-50">
                             Nessun log di accesso registrato per questa azienda.
                         </div>
                     `;
                     return;
                 }
+                
+                boxResults.innerHTML = accessData.map(accountInfo => {
+                    const allMethods = accountInfo.allMediumSignInDetails || [];
 
-                boxRisultati.innerHTML = accessData.map(methodData => {
-                    const risksBreakdownHTML = methodData.riskBreakdown.map(risk => {
-                        const blockRateCalculation = risk.count > 0 ? (risk.blocked / risk.count) * 100 : 0;
-                        const currentLevel = risk.level.toLowerCase().trim(); 
-
-                        if (currentLevel.includes("critical") || currentLevel.includes("severe") || currentLevel.includes("extreme") || currentLevel.includes("high")) {
-                            hexColor = "#dc3545";
-                        } else if (currentLevel.includes("minimal") || currentLevel.includes("low")) {
-                            hexColor = "#198754";
-                        } else {
-                            hexColor = "#ffc107";
-                        }
-
+                    const methodsHTML = allMethods.map(method => {        
                         return `
-                            <div class="p-2 border border-secondary rounded mb-2 text-start" style="background: rgba(255,255,255,0.03); line-height: 1.3 !important;">
-                                <span class="text-white fw-bold" style="font-size: 1.1rem;">
-                                    Classe Rischio: <span style="color: ${hexColor} !important;">${risk.level}</span>
-                                </span><br>
-                                <span class="text-white">Log Totali Analizzati: <strong class="text-success">${risk.count}</strong></span><br>
-                                <span class="text-white-50">Tasso di accessi bloccati: <strong class="text-white">${blockRateCalculation.toFixed(1)}%</strong></span>
-                            </div>
+                        <div class="p-3 border border-secondary rounded mb-3 text-start" style="background: rgba(255,255,255,0.05); line-height: 1.4 !important;">
+                            <span class="text-white fw-bold" style="font-size: 1.1rem;">
+                                ID dispositivo di accesso: ${method.mediumId || 'N/D'}
+                            </span><br>
+                            <span class="text-white">Tipo accesso: ${method.mediumType || 'N/D'}</span><br>
+                            <span class="text-white">Livello Rischio: ${method.riskLevel || 'N/D'}</span><br>
+                            <span class="text-white-50">Stato: ${method.isBlocked ? 'Bloccato' : 'Attivo'}</span>
+                        </div>
                         `;
                     }).join('');
 
                     return `
-                        <div class="card bg-dark bg-opacity-50 border-secondary mt-2 mb-1 rounded-3 overflow-hidden">
-                            <div class="card-header bg-secondary bg-opacity-25 py-1 px-3 border-bottom border-secondary text-start">
-                                <h4 class="h5 m-0 text-success fw-bold"> Canale di Accesso: ${methodData.accessMethod}</h4>
-                            </div>
-                            <div class="card-body p-1">
-                                ${risksBreakdownHTML}
-                            </div>
+                    <div class="card border-secondary mt-3 mb-2 rounded-3 overflow-hidden" style="background: rgba(255, 255, 255, 0.03) !important;">
+                        <div class="card-header bg-secondary bg-opacity-25 py-2 px-3 border-bottom border-secondary text-start d-flex justify-content-between align-items-center">
+                            <h4 class="h5 m-0 text-success fw-bold">Account: ${accountInfo.accountId || 'N/D'}</h4>
                         </div>
+                        <div class="card-body p-3">
+                            ${methodsHTML || '<div class="text-muted text-start p-2">Nessun accesso rilevato per questo account.</div>'}
+                        </div>
+                    </div>
                     `;
                 }).join('');
 
-                btnVerifica.className = "btn btn-verde-chiaro w-100 py-2.5 rounded-3 mt-5";
+                btnVerifyAccess.className = "btn btn-verde-chiaro w-100 py-2.5 rounded-3 mt-5";
             }
         } catch (error) {
             console.error("Errore nel rendering verticale:", error);
-            boxRisultati.innerHTML = `
+            boxResults.innerHTML = `
                 <div class="alert alert-danger text-center fw-bold">
                     Impossibile completare l'analisi dei log di sicurezza.
                 </div>
@@ -123,14 +104,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // ------------------------ query 3 ------------------------
     async function searchTopInvestors() {
         const tbody = document.getElementById('tabellaInvestitoriBody');
-        const btn = document.getElementById('btnCercaInvestitori');
         
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Caricamento...';
-        }
+        if (btnSearchInvestors) {
+            btnSearchInvestors.disabled = true;
+            btnSearchInvestors.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Caricamento...';
+       }
     
         try {
             const response = await axios.get(`/api/azienda/potenziali-investitori?companyCountry=${companyCountry}`);
@@ -144,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </td>
                     </tr>`;
                 return;
-            }
+           }
     
             tbody.innerHTML = '';
             data.leadClassifica.forEach((person, index) => {
@@ -162,8 +143,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </td>
                 `;
                 tbody.appendChild(row);
-            });
-        } catch (error) {
+           });
+       } catch (error) {
             console.error("Errore nel caricamento della classifica:", error);
             tbody.innerHTML = `
                 <tr>
@@ -171,11 +152,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         Si è verificato un errore durante il recupero dei dati.
                     </td>
                 </tr>`;
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = 'Visualizza Classifica';
-            }
-        }
-    }
+       } finally {
+            if (btnSearchInvestors) {
+                btnSearchInvestors.disabled = false;
+                btnSearchInvestors.innerHTML = 'Visualizza Classifica';
+           }
+       }
+   }
 });
