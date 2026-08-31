@@ -196,7 +196,7 @@ router.get('/searchInvestors', async (req, res) => {
                     personId: 1,
                     personName: 1,
                     contiAttivi: 1,
-                    loanAmount: {"$sum": "$loanDetails.amount"},
+                    loanAmount: {"$sum": "$loanDetails.loanAmount"},
                     repayAmount: {"$sum": "$repayDetails.amount"},
                 }
             },

@@ -8,11 +8,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    const welcomeTitle = document.getElementById('titolo-benvenuto');
-    if (welcomeTitle && personName) {
-        welcomeTitle.textContent = `Benvenuto, ${personName}`;
-    }
-
+    
+    document.getElementById('titolo-dashboard').textContent += `: ${personName}`;
     const btnTabStatement = document.getElementById('btn-tab-estratto-conto');
     const btnTabInvestments = document.getElementById('btn-tab-investimenti');
     const paneStatement = document.getElementById('pane-estratto-conto');
@@ -63,14 +60,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            const response = await axios.get(`/api/privato/conti?personId=${personId}`);
+            const response = await axios.get(`/api/privato/accounts?personId=${personId}`);
             const result = response.data;
 
             if (result.success && result.accounts && result.accounts.length > 0) {
                 selectAccount.innerHTML = '';
 
-                selectAccount.innerHTML = result.accounts.map(conto => 
-                    `<option value="${conto.accountId}">Conto ID: ${conto.accountId}</option>`
+                selectAccount.innerHTML = result.accounts.map(accountId => 
+                    `<option value="${accountId}">Conto ID: ${accountId}</option>`
                 ).join('');
 
                 if (btnCalculateExpenses) {
@@ -126,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         expensesListBody.innerHTML = spinnerHTML;
     
         try {
-            const response = await axios.get(`/api/privato/estratto-conto`, {
+            const response = await axios.get(`/api/privato/bankStatement`, {
                 params: {
                     idSelectedAccount: chosenAccount,
                     year: chosenYear,
@@ -140,9 +137,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
         
-            const { financialSummary, profitList = [], spendingsList = [] } = result;
-            if (widgetIncome) widgetIncome.textContent = `+ ${financialSummary.totalProfit.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
-            if (widgetExpenses) widgetExpenses.textContent = `- ${financialSummary.totalSpendings.toLocaleString('it-IT', { minimumFractionDigits: 2 })} €`;
+            const {financialSummary, profitList = [], spendingsList = []} = result;
+            if (widgetIncome) widgetIncome.textContent = `+ ${financialSummary.totalProfit.toLocaleString('it-IT', {minimumFractionDigits: 2})} €`;
+            if (widgetExpenses) widgetExpenses.textContent = `- ${financialSummary.totalSpendings.toLocaleString('it-IT', {minimumFractionDigits: 2})} €`;
         
             const renderTransactionItem = (tx, isIncome) => {
                 const sign = isIncome ? '+' : '-';
@@ -161,7 +158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Numero transazioni mensili: <strong class="text-white">${tx.monthTotalAction}</strong>
                                 </small>
                                 <small class="text-white-50 d-block mb-1" style="font-size: 0.75rem;">
-                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni mensili: <strong class="text-white">${sign} ${(tx.monthTotalMoney || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
+                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni mensili: <strong class="text-white">${sign} ${(tx.monthTotalMoney || 0).toLocaleString('it-IT', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €</strong>
                                 </small>
                             </div>
 
@@ -176,7 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Numero transazioni annue intermediario-finale: <strong class="text-white">${tx.monthTotalActionYear}</strong>
                                 </small>
                                 <small class="text-white-50 d-block mb-1" style="font-size: 0.75rem;">
-                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni annue intermediario-finale: <strong class="text-white">${sign} ${(tx.monthTotalMoneyYear || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
+                                    <span class="bi bi-arrow-left-right text-warning me-1" aria-hidden="true"></span>Totale transazioni annue intermediario-finale: <strong class="text-white">${sign} ${(tx.monthTotalMoneyYear || 0).toLocaleString('it-IT', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €</strong>
                                 </small>
                             </div>
 
@@ -221,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     
         try {
-            const response = await axios.get('/api/privato/classifica-investitori');
+            const response = await axios.get('/api/privato/investorsRanking');
             const data = response.data;
     
             if (!data.success || !data.ranking || data.ranking.length === 0) {

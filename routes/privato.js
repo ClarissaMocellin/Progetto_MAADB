@@ -1,23 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const connectMongo = require('../config/mongo');
-const { getNeo4jSession } = require('../config/neo4j');
+const {getNeo4jSession} = require('../config/neo4j');
 
-router.get('/conti', async (req, res) => {
+router.get('/accounts', async (req, res) => {
     try {
-        const personIdstr = req.query.personId;
-        if (!personIdstr) {
-            return res.status(400).json({ 
+        const personId = req.query.personId;
+        if (!personId) {
+            return res.status(400).json({
                 success: false, 
                 message: "Parametro 'personId' mancante nella richiesta." 
             });
         }
+
         const db = await connectMongo();
-        const foundAccounts = await db.collection("PersonOwnAccount").find({  
-            personId: personIdstr 
+        const foundAccounts = await db.collection("PersonOwnAccount").find({ 
+            personId: personId 
         }).toArray();
 
-        const formattedResult = foundAccounts.map(conto => ({ accountId: conto.accountId }));
+        const formattedResult = foundAccounts.map(conto => conto.accountId);
 
         return res.status(200).json({
             success: true,
@@ -25,22 +26,24 @@ router.get('/conti', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Errore nel server durante il recupero dei conti utenti:", error);
-        return res.status(500).json({ 
+        console.error("Errore nel server durante il recupero dei conti:", error);
+        return res.status(500).json({
             success: false, 
             message: "Errore interno del server durante il recupero dei conti." 
         });
     }
 });
 
-router.get('/estratto-conto', async (req, res) => {
+router.get('/bankStatement', async (req, res) => {
     let sessionNeo4j;
 
     try {
-        let { idSelectedAccount, year, month } = req.query;
-
+        let {idSelectedAccount, year, month} = req.query;
         if (!idSelectedAccount || !year || !month) {
-            return res.status(400).json({ success: false, error: "Parametri obbligatori mancanti." });
+            return res.status(400).json({
+                success: false, 
+                error: "Parametri obbligatori mancanti."
+            });
         }
 
         const yearInt = parseInt(year)
@@ -49,9 +52,10 @@ router.get('/estratto-conto', async (req, res) => {
         const endDate = new Date(Date.UTC(yearInt, monthInt, 1, 0, 0, 0, 0)).toISOString();
         const startYearDate = new Date(Date.UTC(yearInt, 0, 1, 0, 0, 0, 0)).toISOString();
         const endYearDate = new Date(Date.UTC(yearInt + 1, 0, 1, 0, 0, 0, 0)).toISOString();
-        sessionNeo4j = getNeo4jSession();
 
         // ============================== Neo4j ===================================
+        sessionNeo4j = getNeo4jSession();
+
         const queryCypher = `
         MATCH (myAccount:Account {fromId: $idSelectedAccount})
 
@@ -109,7 +113,7 @@ router.get('/estratto-conto', async (req, res) => {
                 azioniTraDueFinale: case when dest2 is not null then azioniTraDueFinale else 0 end,
                 totaleSoldiSpostatiFinaleAnnuo: case when dest2 is not null then coalesce(totaleSoldiSpostatiFinaleAnnuo, 0) else 0 end,
                 azioniTotaliAnnoFinale: case when dest2 is not null then azioniTotaliAnno else 0 end
-            }) AS listaUsciteStrutturate
+           }) AS listaUsciteStrutturate
         }
 
         CALL (myAccount) {
@@ -161,7 +165,7 @@ router.get('/estratto-conto', async (req, res) => {
             idSelectedAccount: idSelectedAccount,
             startDate: startDate,
             endDate: endDate,
-            startYearDate:startYearDate,
+            startYearDate: startYearDate,
             endYearDate: endYearDate
         });
 
@@ -196,10 +200,10 @@ router.get('/estratto-conto', async (req, res) => {
 
         const [relCompaniesAccounts, relPersonAccounts] = await Promise.all([
             accountIdsArray.length > 0
-                ? dbMongo.collection('CompanyOwnAccount').find({ accountId: { $in: accountIdsArray } }).toArray()
+                ? dbMongo.collection('CompanyOwnAccount').find({accountId: {$in: accountIdsArray}}).toArray()
                 : Promise.resolve([]),
             accountIdsArray.length > 0
-                ? dbMongo.collection('PersonOwnAccount').find({ accountId: { $in: accountIdsArray } }).toArray()
+                ? dbMongo.collection('PersonOwnAccount').find({accountId: {$in: accountIdsArray}}).toArray()
                 : Promise.resolve([])
         ]);
 
@@ -207,8 +211,8 @@ router.get('/estratto-conto', async (req, res) => {
             relCompaniesAccounts.length > 0 
                 ? dbMongo.collection('Company')
                     .find(
-                        { companyId: { $in: relCompaniesAccounts.map(l => l.companyId) } },
-                        { projection: { companyId: 1, companyName: 1, isBlocked: 1 } }
+                        {companyId: {$in: relCompaniesAccounts.map(l => l.companyId)}},
+                        {projection: {companyId: 1, companyName: 1, isBlocked: 1}}
                     )
                     .toArray() 
                 : Promise.resolve([]),
@@ -216,8 +220,8 @@ router.get('/estratto-conto', async (req, res) => {
             relPersonAccounts.length > 0 
                 ? dbMongo.collection('Person')
                     .find(
-                        { personId: { $in: relPersonAccounts.map(l => l.personId) } },
-                        { projection: { personId: 1, personName: 1, isBlocked: 1 } }
+                        {personId: {$in: relPersonAccounts.map(l => l.personId)}},
+                        {projection: {personId: 1, personName: 1, isBlocked: 1}}
                     )
                     .toArray() 
                 : Promise.resolve([])
@@ -229,12 +233,12 @@ router.get('/estratto-conto', async (req, res) => {
         
         relCompaniesAccounts.forEach(l => {
             const az = companiesMap.get(l.companyId);
-            if (az) personalInformationMap.set(l.accountId, { nome: az.companyName, tipo: "Company", bloccato: az.isBlocked });
+            if (az) personalInformationMap.set(l.accountId, {nome: az.companyName, tipo: "Company", bloccato: az.isBlocked});
         });
 
         relPersonAccounts.forEach(l => {
             const pr = personsMap.get(l.personId);
-            if (pr) personalInformationMap.set(l.accountId, { nome: pr.personName, tipo: "Person", bloccato: pr.isBlocked });
+            if (pr) personalInformationMap.set(l.accountId, {nome: pr.personName, tipo: "Person", bloccato: pr.isBlocked});
         });
 
         const getNumber = (value) => {
@@ -277,7 +281,7 @@ router.get('/estratto-conto', async (req, res) => {
 
     } catch (error) {
         console.error("Errore nel calcolo:", error);
-        return res.status(500).json({ success: false, error: "Errore interno del server." });
+        return res.status(500).json({success: false, error: "Errore interno del server."});
     } finally {
         if (sessionNeo4j) {
             await sessionNeo4j.close();
@@ -285,7 +289,7 @@ router.get('/estratto-conto', async (req, res) => {
     }
 });
 
-router.get('/classifica-investitori', async (req, res) => {
+router.get('/investorsRanking', async (req, res) => {
     let neo4jSession;
     
     try {
@@ -293,11 +297,11 @@ router.get('/classifica-investitori', async (req, res) => {
         const mongoDb = await connectMongo();
         
         const activeCompanies = await mongoDb.collection('Company')
-            .find({ isBlocked: { $ne: true } })
-            .project({ companyId: 1, companyName: 1 })
+            .find({isBlocked: false})
+            .project({companyId: 1, companyName: 1})
             .toArray();
 
-        const activeCompanyIds = activeCompanies.map(company => company.companyId.toString());
+        const activeCompanyIds = activeCompanies.map(company => company.companyId);
         if (activeCompanyIds.length === 0) {
             return res.status(200).json({
                 success: true,
@@ -309,7 +313,7 @@ router.get('/classifica-investitori', async (req, res) => {
         activeCompanies.forEach(c => {
             companyNamesMap[c.companyId] = c.companyName;
         });
-
+        
         // ================================== Neo4j =======================================
         neo4jSession = getNeo4jSession();
 
@@ -318,88 +322,78 @@ router.get('/classifica-investitori', async (req, res) => {
             WHERE companyAccount.investorId IN $activeCompanyIds
             
             OPTIONAL MATCH (directInvestor)-[:INVEST_IN]->(companyAccount)
-            WHERE directInvestor <> companyAccount AND (directInvestor:Person OR directInvestor:Company)
-            WITH companyAccount, 
-                COLLECT(DISTINCT directInvestor) AS directNodesList,
-                COUNT(DISTINCT directInvestor) AS directInvestorsCount
-            
-            OPTIONAL MATCH (indirectInvestor)-[:INVEST_IN]->(middle)-[:INVEST_IN]->(companyAccount)
+            WHERE directInvestor <> companyAccount
+
+            OPTIONAL MATCH (indirectInvestor)-[:INVEST_IN]->(middleInvestor)-[:INVEST_IN]->(companyAccount)
             WHERE indirectInvestor <> companyAccount 
-                AND indirectInvestor <> middle
-                AND (indirectInvestor:Person OR indirectInvestor:Company)
-                AND NOT indirectInvestor IN directNodesList
+                AND indirectInvestor <> middleInvestor
+                AND NOT (indirectInvestor)-[:INVEST_IN]->(companyAccount)
             
             RETURN companyAccount.investorId AS companyId,
-                directInvestorsCount,
+                COUNT(DISTINCT directInvestor) AS directInvestors,
                 COUNT(DISTINCT indirectInvestor) AS indirectInvestors        
         `;
 
+        const neo4jGraphResult = await neo4jSession.run(cypherQuery, {activeCompanyIds});
+
         // ==================== MongoDB ====================
-        const [graphResult, mongoLoansData] = await Promise.all([
-            neo4jSession.run(cypherQuery, { activeCompanyIds }),
-            mongoDb.collection('CompanyApplyLoan').aggregate([
-                {
-                    $match: {
-                        companyId: { $in: activeCompanyIds }
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'Loan',
-                        localField: 'loanId',
-                        foreignField: 'loanId',
-                        as: 'loanDetails'
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'AccountRepayLoan',
-                        localField: 'loanId',
-                        foreignField: 'loanId',
-                        as: 'repayDetails'
-                    }
-                },
-                {
-                    $project: {
-                        companyId: 1,
-                        loanAmount: { $ifNull: [ { $arrayElemAt: [ "$loanDetails.loanAmount", 0 ] }, 0 ] },
-                        repayAmount: { $sum: "$repayDetails.amount" }
-                    }
-                },
-                {
-                    $group: {
-                        _id: "$companyId",
-                        totalLoanAmount: { $sum: "$loanAmount" },
-                        totalRepayAmount: { $sum: "$repayAmount" }
-                    }
+        const mongoLoansData = await mongoDb.collection('CompanyApplyLoan').aggregate([
+            {
+                $match: {
+                    companyId: {$in: activeCompanyIds}
                 }
-            ]).toArray()                     
-        ]);
-        
-        const getSafeNumber = (value) => {
-            if (value == null) return 0;
-            if (typeof value === 'object' && value.low !== undefined) return value.low;
-            const parsed = Number(value);
-            return isNaN(parsed) ? 0 : parsed;
-        };
+            },
+            {
+                $lookup: {
+                    from: 'Loan',
+                    localField: 'loanId',
+                    foreignField: 'loanId',
+                    as: 'loanDetails'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'AccountRepayLoan',
+                    localField: 'loanId',
+                    foreignField: 'loanId',
+                    as: 'repayDetails'
+                }
+            },
+            {
+                $project: {
+                    companyId: 1,
+                    loanAmount: {$ifNull: [{$arrayElemAt: ["$loanDetails.loanAmount", 0]}, 0]},
+                    repayAmount: {$sum: {$ifNull: ["$repayDetails.amount", 0]}}
+                }
+            },
+            {
+                $group: {
+                    _id: "$companyId",
+                    totalLoanAmount: {$sum: "$loanAmount"},
+                    totalRepayAmount: {$sum: "$repayAmount"}
+                }
+            }
+        ]).toArray()                     
 
         const networkCredibilityMap = {};
-        graphResult.records.forEach(record => {
-            const cId = record.get('companyId');
-            networkCredibilityMap[cId] = {
-                directInvestors: getSafeNumber(record.get('directInvestorsCount')),
+        neo4jGraphResult.records.forEach(record => {
+            networkCredibilityMap[record.get('companyId')] = {
+                directInvestors: getSafeNumber(record.get('directInvestors')),
                 indirectInvestors: getSafeNumber(record.get('indirectInvestors'))
             };
         });
 
         const financialMap = {};
         activeCompanyIds.forEach(id => {
-            financialMap[id] = { totalLoanAmount: 0, totalRepayAmount: 0 };
+            financialMap[id] = {
+                totalLoanAmount: 0, 
+                totalRepayAmount: 0
+            };
         });
 
         mongoLoansData.forEach(item => {
-            if (item._id) {
-                const cId = item._id.toString();
+            const cId = item._id
+            if (cId) {
                 if (financialMap[cId]) {
                     financialMap[cId].totalLoanAmount = item.totalLoanAmount || 0;
                     financialMap[cId].totalRepayAmount = item.totalRepayAmount || 0;
@@ -408,12 +402,13 @@ router.get('/classifica-investitori', async (req, res) => {
         });
 
         const companyRanking = activeCompanyIds.map(companyId => {
-            const network = networkCredibilityMap[companyId] || { directInvestors: 0, indirectInvestors: 0 };
+            const network = networkCredibilityMap[companyId] || {directInvestors: 0, indirectInvestors: 0};
+            
             const finance = financialMap[companyId];
             const totLoan = finance.totalLoanAmount;
             const totRepay = finance.totalRepayAmount;
-            const finalScore = (network.directInvestors * 1.0) + 
-                               (network.indirectInvestors * 0.5);
+            
+            const finalScore = (network.directInvestors * 1.0) + (network.indirectInvestors * 0.5);
 
             return {
                 companyId: companyId,
@@ -426,7 +421,7 @@ router.get('/classifica-investitori', async (req, res) => {
 
         companyRanking.sort((a, b) => b.finalInvestmentScore - a.finalInvestmentScore);
         const top20Ranking = companyRanking.slice(0, 20);
-
+        
         return res.status(200).json({
             success: true,
             ranking: top20Ranking
@@ -434,7 +429,10 @@ router.get('/classifica-investitori', async (req, res) => {
 
     } catch (error) {
         console.error("Errore nel recupero della classifica:", error);
-        return res.status(500).json({ success: false, error: error.message });
+        return res.status(500).json({
+            success: false, 
+            error: error.message
+        });
     } finally {
         if (neo4jSession) await neo4jSession.close();
     }
@@ -446,4 +444,20 @@ function parseNeo4jNumber(val, isInt = false) {
     if (val?.toNumber) return val.toNumber();
     if (val == null) return 0;
     return isInt ? (parseInt(val, 10) || 0) : (parseFloat(val) || 0);
+}
+
+function getSafeNumber(value) {
+    if (value == null) {
+        return 0;
+    }
+    if (typeof value === 'object' && value.low !== undefined) {
+        return value.low;
+    }
+    
+    var parsed = Number(value);
+    if (isNaN(parsed)) {
+        return 0;
+    } else {
+        return parsed;
+    }
 }
