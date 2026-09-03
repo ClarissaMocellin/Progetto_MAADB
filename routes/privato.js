@@ -87,11 +87,8 @@ router.get('/bankStatement', async (req, res) => {
                 COUNT(DISTINCT out) AS numeroAzioniMese,
                 SUM(out.amount) AS totaleSoldiSpostatiMese
         
-            OPTIONAL MATCH (dest)-[relEsistente:TRANSFER]->(dest2:Account)
-            WHERE dest2 <> myAccount
-            
             OPTIONAL MATCH (dest)-[out2:TRANSFER]->(dest2)
-            WHERE out2.createTime >= $startYearDate AND out2.createTime < $endYearDate
+            WHERE out2.createTime >= $startYearDate AND out2.createTime < $endYearDate AND dest2 <> myAccount
             
             WITH dest, dest2, numeroAzioniMese, totaleSoldiSpostatiMese,
                 COUNT(DISTINCT out2) AS azioniTraDueFinale,
@@ -107,12 +104,12 @@ router.get('/bankStatement', async (req, res) => {
         
             RETURN COLLECT({
                 intermedioId: dest.fromId,
-                finaleId: case when dest2 is not null then dest2.fromId else null end,
+                finaleId: dest2.fromId,
                 azioniTraDue: numeroAzioniMese,
                 totaleSoldiSpostati: totaleSoldiSpostatiMese,
-                azioniTraDueFinale: case when dest2 is not null then azioniTraDueFinale else 0 end,
-                totaleSoldiSpostatiFinaleAnnuo: case when dest2 is not null then coalesce(totaleSoldiSpostatiFinaleAnnuo, 0) else 0 end,
-                azioniTotaliAnnoFinale: case when dest2 is not null then azioniTotaliAnno else 0 end
+                azioniTraDueFinale: azioniTraDueFinale,
+                totaleSoldiSpostatiFinaleAnnuo: totaleSoldiSpostatiFinaleAnnuo,
+                azioniTotaliAnnoFinale: azioniTotaliAnno
            }) AS listaUsciteStrutturate
         }
 
@@ -145,12 +142,12 @@ router.get('/bankStatement', async (req, res) => {
             
             RETURN COLLECT({
                 intermedioId: src.fromId,
-                finaleId: case when src2 is not null then src2.fromId else null end,
+                finaleId: src2.fromId,
                 azioniTraDue: numeroAzioniMeseSrc,
-                totaleSoldiSpostati: coalesce(totaleSoldiSpostatiMeseSrc, 0),
-                azioniTraDueFinale: case when src2 is not null then azioniTraDueFinaleSrc else 0 end,
-                totaleSoldiSpostatiFinaleAnnuo: case when src2 is not null then coalesce(totaleSoldiSpostatiFinaleSrc, 0) else 0 end,
-                azioniTotaliAnnoFinale: case when src2 is not null then azioniTotaliAnnoSrc else 0 end
+                totaleSoldiSpostati: totaleSoldiSpostatiMeseSrc,
+                azioniTraDueFinale: azioniTraDueFinaleSrc,
+                totaleSoldiSpostatiFinaleAnnuo: totaleSoldiSpostatiFinaleSrc,
+                azioniTotaliAnnoFinale: azioniTotaliAnnoSrc
             }) AS listaEntrateStrutturate
         }
 
@@ -209,21 +206,17 @@ router.get('/bankStatement', async (req, res) => {
 
         const [companies, persons] = await Promise.all([
             relCompaniesAccounts.length > 0 
-                ? dbMongo.collection('Company')
-                    .find(
-                        {companyId: {$in: relCompaniesAccounts.map(l => l.companyId)}},
-                        {projection: {companyId: 1, companyName: 1, isBlocked: 1}}
-                    )
-                    .toArray() 
+                ? dbMongo.collection('Company').find(
+                    {companyId: {$in: relCompaniesAccounts.map(l => l.companyId)}},
+                    {projection: {companyId: 1, companyName: 1, isBlocked: 1}}
+                ).toArray() 
                 : Promise.resolve([]),
                 
             relPersonAccounts.length > 0 
-                ? dbMongo.collection('Person')
-                    .find(
-                        {personId: {$in: relPersonAccounts.map(l => l.personId)}},
-                        {projection: {personId: 1, personName: 1, isBlocked: 1}}
-                    )
-                    .toArray() 
+                ? dbMongo.collection('Person').find(
+                    {personId: {$in: relPersonAccounts.map(l => l.personId)}},
+                    {projection: {personId: 1, personName: 1, isBlocked: 1}}
+                ).toArray() 
                 : Promise.resolve([])
         ]);
 
@@ -260,7 +253,7 @@ router.get('/bankStatement', async (req, res) => {
                 intermediateType: intermediateInfo.tipo || "Unknown",
                 finalName: finalInfo.nome || `Nome Unknown ${idFinaleStr}`,
                 finalType: finalInfo.tipo || "Unknown",
-                finalBlocked: finalInfo.nome ? "Attivo" : "Unknoun",
+                finalBlocked: finalInfo.nome ? "Attivo" : "Unknown",
                 monthTotalAction: getNumber(item.azioniTraDue),
                 monthTotalActionYear: getNumber(item.azioniTraDueFinale),
                 monthTotalMoney: parseFloat(getNumber(item.totaleSoldiSpostati).toFixed(2)),

@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    
     document.getElementById('titolo-dashboard').textContent += `: ${personName}`;
     const btnTabStatement = document.getElementById('btn-tab-estratto-conto');
     const btnTabInvestments = document.getElementById('btn-tab-investimenti');
@@ -187,13 +186,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             };
         
-            incomeListBody.innerHTML = profitList.length === 0
-                ? `<li class="list-group-item bg-transparent text-white-50 text-center small border-0 py-3">Nessun accredito ricevuto nel mese.</li>`
-                : profitList.map(tx => renderTransactionItem(tx, true)).join('');
-        
-            expensesListBody.innerHTML = spendingsList.length === 0
-                ? `<li class="list-group-item bg-transparent text-white-50 text-center small border-0 py-3">Nessuna spesa o bonifico effettuato.</li>`
-                : spendingsList.map(tx => renderTransactionItem(tx, false)).join('');
+
+            if (profitList.length == 0) {
+                incomeListBody.innerHTML = `<li class="list-group-item bg-transparent text-white-50 text-center small border-0 py-3">Nessun accredito ricevuto nel mese.</li>`;
+            } else {
+                incomeListBody.innerHTML = profitList.map(tx => renderTransactionItem(tx, true)).join('');
+            }
+
+            if (spendingsList.length == 0) {
+                expensesListBody.innerHTML = `<li class="list-group-item bg-transparent text-white-50 text-center small border-0 py-3">Nessuna spesa o bonifico effettuato.</li>`;
+            } else {
+                expensesListBody.innerHTML = spendingsList.map(tx => renderTransactionItem(tx, false)).join('');
+            }
         
         } catch (error) {
             console.error("Errore durante il recupero dei flussi mensili:", error);
@@ -250,6 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
                 tbody.appendChild(row);
             });
+            
         } catch (error) {
             console.error("Errore nel caricamento della classifica:", error);
             tbody.innerHTML = `
