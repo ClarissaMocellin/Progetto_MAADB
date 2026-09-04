@@ -234,13 +234,6 @@ router.get('/bankStatement', async (req, res) => {
             if (pr) personalInformationMap.set(l.accountId, {nome: pr.personName, tipo: "Person", bloccato: pr.isBlocked});
         });
 
-        const getNumber = (value) => {
-            if (value == null) return 0;
-            if (typeof value === 'object' && value.low !== undefined) return value.low;
-            const p = Number(value);
-            return isNaN(p) ? 0 : p;
-        };
-
         const enrichInitialStructure = (item) => {
             const idIntermedioStr = item.intermedioId || '';
             const idFinaleStr = item.finaleId || '';    
@@ -254,11 +247,11 @@ router.get('/bankStatement', async (req, res) => {
                 finalName: finalInfo.nome || `Nome Unknown ${idFinaleStr}`,
                 finalType: finalInfo.tipo || "Unknown",
                 finalBlocked: finalInfo.nome ? "Attivo" : "Unknown",
-                monthTotalAction: getNumber(item.azioniTraDue),
-                monthTotalActionYear: getNumber(item.azioniTraDueFinale),
-                monthTotalMoney: parseFloat(getNumber(item.totaleSoldiSpostati).toFixed(2)),
-                monthTotalMoneyYear: parseFloat(getNumber(item.totaleSoldiSpostatiFinaleAnnuo).toFixed(2)),
-                totFinalAccountActionYear: getNumber(item.azioniTotaliAnnoFinale),
+                monthTotalAction: parseNeo4jNumber(item.azioniTraDue),
+                monthTotalActionYear: parseNeo4jNumber(item.azioniTraDueFinale),
+                monthTotalMoney: parseFloat(parseNeo4jNumber(item.totaleSoldiSpostati).toFixed(2)),
+                monthTotalMoneyYear: parseFloat(parseNeo4jNumber(item.totaleSoldiSpostatiFinaleAnnuo).toFixed(2)),
+                totFinalAccountActionYear: parseNeo4jNumber(item.azioniTotaliAnnoFinale),
             };
         };
 
